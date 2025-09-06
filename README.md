@@ -1,0 +1,1 @@
+# sistema_de_pagamento_escolar_por_nfc
