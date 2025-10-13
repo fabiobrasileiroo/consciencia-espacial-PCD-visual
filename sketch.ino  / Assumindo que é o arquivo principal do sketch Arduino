@@ -1,0 +1,48 @@
+float cm;  // comprimento da onda (nota: variável pode ser renomeada para algo mais descritivo, como distanciaCm)
+unsigned long duracao;  // Tempo de voo, deve ser unsigned long para pulseIn()
+
+int pinoTRIG = 11;
+int pinoECHO = 10;
+int pinoLED = 13;
+
+void setup() {
+  pinMode(pinoLED, OUTPUT);  // Corrigido: pinoLED (com 'L' maiúsculo)
+  // sensor
+  pinMode(pinoECHO, INPUT);
+  pinMode(pinoTRIG, OUTPUT);
+  // porta serial
+  Serial.begin(9600);
+}
+
+void loop() {
+  cm = calcula_distancia();
+  Serial.print("Distancia: ");
+  Serial.println(cm);  // Corrigido: Dividido em duas chamadas para imprimir corretamente
+  digitalWrite(pinoLED, HIGH);
+  delay(1000);  // Wait for 1000 millisecond(s)
+  digitalWrite(pinoLED, LOW);  // Corrigido: pinoLED (com 'L' maiúsculo)
+  delay(1000);  // Wait for 1000 millisecond(s)
+}
+
+float calcula_distancia() {
+  // Limpa o pino TRIG - macetinho para funcionar melhor
+  digitalWrite(pinoTRIG, LOW);
+  delayMicroseconds(5);
+  // Define o pino TRIG como HIGH por 10 microsegundos
+  // Envio do pulso de ultrassom
+  digitalWrite(pinoTRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(pinoTRIG, LOW);
+  // Tempo de voo -> duração (Lê o tempo do pino ECHO)
+  duracao = pulseIn(pinoECHO, HIGH);
+  // Calcula a distância em cm
+  // Velocidade do som = 343 m/s ≈ 0.0343 cm/μs
+  // Para ida e volta: cm = (duracao / 2) * 0.0343
+  cm = (duracao / 2.0) * 0.0343;  // Corrigido: Usar 0.0343 e dividir por 2.0 para float
+  // Ideal 3 metros = 300 cm
+  // if(cm >= 300) {
+  //   cm = 0;
+  // }
+  // Sensor ultrassônico HC-SR04 possui problemas para calcular distâncias maiores que 3 metros
+  return cm;
+}
