@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "node server/dev-server.js && expo start",
+    "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
@@ -14,7 +14,8 @@
     "test": "jest",
     "test:e2e": "cucumber-js",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "eas:build:android": "eas build --platform android"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -61,5 +62,12 @@
     "node-fetch": "^2.7.0",
     "@types/node-fetch": "^2.6.11"
   },
-  "private": true
+  "private": true,
+  "build": {
+    "production": {
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
 }
