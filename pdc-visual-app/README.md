@@ -1,4 +1,4 @@
-# PDC Visual 👁️
+# PCD Visual 👁️
 
 App de auxílio visual com detecção de objetos por câmera, feedback por voz (TTS) e vibração háptica.
 
