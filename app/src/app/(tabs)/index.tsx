@@ -1,4 +1,5 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Battery } from '@/components/ui/battery';
 import { hapticsService, storageService } from 'services/service-provider';
 import { Image } from 'react-native'
 import React, { useState, useEffect } from 'react';
@@ -37,7 +38,6 @@ export default function HomeScreen() {
       console.error('Erro ao salvar volume:', error);
     }
   };
-
   const handleVolumeChange = (value: number) => {
     setVolume(value);
   };
@@ -67,123 +67,103 @@ export default function HomeScreen() {
           resizeMode="contain"
         />
 
-        <Card>
-          <CardHeader>
-            <Image
-              source={{ uri: 'https://i.ibb.co/twQ1VvGY/glasses.png' }}
-              className="w-38 h-38"
-              resizeMode="contain"
-            />
-            <CardTitle>Dispositivo ligado</CardTitle>
-            <CardDescription>{deviceTime}</CardDescription>
-          </CardHeader>
-          {/* <CardContent>
-            <Text className="text-base text-primary">
-              Sleek, easy to use components to build your next app faster.
-            </Text>
-          </CardContent> */}
-          {/* <CardFooter> */}
-            <View className="flex-row justify-between items-center px-4 ">
-              <View className="flex-row items-center gap-2">
-                <IconSymbol name="battery.100" size={20} color="#fff" />
-                <Text className="text-white font-semibold">{battery}%</Text>
+        <View className="flex gap-5">
+          <Card>
+            <CardHeader>
+              <View className="flex-row items-center gap-3 mb-2">
+                <View className="p-3 rounded-full">
+                  <IconSymbol name="eyeglasses" size={28} color="#fff" />
+                </View>
+                <View className="flex-1">
+                  <CardTitle>Dispositivo ligado</CardTitle>
+                  <CardDescription>{deviceTime}</CardDescription>
+                </View>
               </View>
-              <View className="bg-[#4CAF50] px-4 py-2 rounded-full">
-                <Text className="text-white font-semibold">Conectado</Text>
+            </CardHeader>
+            <CardContent>
+              <View className="flex-row justify-between items-center">
+                <View className="ml-4 flex-row items-center gap-3">
+                  <Battery  percent={battery} width={40} height={20} />
+                  <Text className="text-white font-semibold text-base">{battery}%</Text>
+                </View>
+                <View className="bg-[#4CAF50] px-4 py-2 rounded-full">
+                  <Text className="text-white font-semibold">Conectado</Text>
+                </View>
               </View>
-            </View>
-          {/* </CardFooter> */}
-        </Card>
-        {/* <View className="bg-[#2c3142] rounded-3xl p-5 mb-5">
-          <View className="flex-row items-center gap-4 mb-4">
-            <View className="flex-1">
-              <Image
-                source={{ uri: 'https://i.ibb.co/twQ1VvGY/glasses.png' }}
-                className="w-38 h-38"
-                resizeMode="contain" /> <Text className="text-xl font-semibold text-white">Dispositivo ligado!</Text>
-              <Text className="text-base text-gray-400 mt-1">{deviceTime}</Text>
-            </View>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <View className="flex-row justify-around">
+                <View className="items-center">
+                  <IconSymbol name="thermometer" size={28} color="#4CAF50" />
+                  <Text className="text-white font-semibold mt-2">{temperature}°C</Text>
+                </View>
+                <View className="items-center">
+                  <IconSymbol name="clock" size={28} color="#4CAF50" />
+                  <Text className="text-white font-semibold mt-2">{usageTime}h</Text>
+                </View>
+                <View className="items-center">
+                  <IconSymbol name="exclamationmark.triangle" size={28} color="#FFD54F" />
+                  <Text className="text-white font-semibold mt-2">{alerts} avisos</Text>
+                </View>
+              </View>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Testar som</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <View className="flex-row items-center gap-3">
+                <IconSymbol name="speaker.wave.2.fill" size={24} color="#4CAF50" />
+                <Slider
+                  style={{ flex: 1, height: 40 }}
+                  value={volume}
+                  onValueChange={handleVolumeChange}
+                  onSlidingComplete={handleVolumeComplete}
+                  minimumValue={0}
+                  maximumValue={1}
+                  minimumTrackTintColor="#4CAF50"
+                  maximumTrackTintColor="#555"
+                  thumbTintColor="#4CAF50"
+                />
+              </View>
+            </CardContent>
+          </Card>
+          <View className="flex-row gap-3 mb-5">
+            <TouchableOpacity
+              className="flex-1 bg-[#4a5266] py-4 rounded-xl flex-row items-center justify-center gap-2"
+              onPress={handleChangeMode}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="arrow.triangle.2.circlepath" size={20} color="#fff" />
+              <Text className="text-white text-base font-semibold">Mudar modo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="flex-1 bg-[#4a5266] py-4 rounded-xl flex-row items-center justify-center gap-2"
+              onPress={handleConnectBluetooth}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="antenna.radiowaves.left.and.right" size={20} color="#fff" />
+              <Text className="text-white text-base font-semibold">Conectar Bluetooth</Text>
+            </TouchableOpacity>
           </View>
-
-          <View className="flex-row justify-between items-center">
-            <View className="flex-row items-center gap-2">
-              <IconSymbol name="battery.100" size={20} color="#fff" />
-              <Text className="text-white font-semibold">{battery}%</Text>
-            </View>
-            <View className="bg-[#4CAF50] px-4 py-2 rounded-full">
-              <Text className="text-white font-semibold">Conectado</Text>
-            </View>
-          </View>
-        </View> */}
-
-        <View className="bg-[#2c3142] rounded-3xl p-5 mb-5">
-          <Text className="text-xl font-semibold text-white mb-4">Histórico</Text>
-
-          <View className="flex-row justify-around">
-            <View className="items-center">
-              <IconSymbol name="thermometer" size={24} color="#fff" />
-              <Text className="text-white font-semibold mt-2">{temperature}°C</Text>
-            </View>
-            <View className="items-center">
-              <IconSymbol name="clock" size={24} color="#fff" />
-              <Text className="text-white font-semibold mt-2">{usageTime}h</Text>
-            </View>
-            <View className="items-center">
-              <IconSymbol name="exclamationmark.triangle" size={24} color="#fff" />
-              <Text className="text-white font-semibold mt-2">{alerts} avisos</Text>
-            </View>
-          </View>
-        </View>
-
-        <View className="bg-[#2c3142] rounded-3xl p-5 mb-5">
-          <Text className="text-xl font-semibold text-white mb-4">Testar som</Text>
-
-          <View className="flex-row items-center gap-3">
-            <IconSymbol name="speaker.wave.2.fill" size={24} color="#4CAF50" />
-            <Slider
-              style={{ flex: 1, height: 40 }}
-              value={volume}
-              onValueChange={handleVolumeChange}
-              onSlidingComplete={handleVolumeComplete}
-              minimumValue={0}
-              maximumValue={1}
-              minimumTrackTintColor="#4CAF50"
-              maximumTrackTintColor="#555"
-              thumbTintColor="#4CAF50"
-            />
-          </View>
-        </View>
-
-        <View className="flex-row gap-3 mb-5">
-          <TouchableOpacity
-            className="flex-1 bg-[#4a5266] py-4 rounded-xl flex-row items-center justify-center gap-2"
-            onPress={handleChangeMode}
-            activeOpacity={0.7}
-          >
-            <IconSymbol name="arrow.triangle.2.circlepath" size={20} color="#fff" />
-            <Text className="text-white text-base font-semibold">Mudar modo</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="flex-1 bg-[#4a5266] py-4 rounded-xl flex-row items-center justify-center gap-2"
-            onPress={handleConnectBluetooth}
-            activeOpacity={0.7}
-          >
-            <IconSymbol name="antenna.radiowaves.left.and.right" size={20} color="#fff" />
-            <Text className="text-white text-base font-semibold">Conectar Bluetooth</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View className="bg-[#2c3142] rounded-3xl p-5 mb-5">
-          <Text className="text-xl font-semibold text-white mb-4">
-            Transcrição de objetos
-          </Text>
-
-          <Text className="text-base text-gray-300 leading-6">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-            exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure
-          </Text>
+          <Card>
+            <CardHeader>
+              <CardTitle>Transcrição de objetos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Text className="text-base text-gray-300 leading-6">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+                exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure
+              </Text>
+            </CardContent>
+          </Card>
         </View>
       </ScrollView>
     </SafeAreaView>

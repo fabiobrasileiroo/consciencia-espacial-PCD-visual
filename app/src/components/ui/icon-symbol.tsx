@@ -18,6 +18,14 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'battery.100': 'battery-full',
+  'thermometer': 'thermostat',
+  'clock': 'access-time',
+  'exclamationmark.triangle': 'warning',
+  'speaker.wave.2.fill': 'volume-up',
+  'arrow.triangle.2.circlepath': 'sync',
+  'antenna.radiowaves.left.and.right': 'bluetooth',
+  'eyeglasses': 'visibility',
 } as IconMapping;
 
 /**
