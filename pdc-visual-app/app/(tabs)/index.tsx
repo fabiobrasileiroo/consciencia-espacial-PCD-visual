@@ -1,72 +1,254 @@
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { hapticsService, ttsService } from '@/services/service-provider';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { styles } from './styles';
+import { useApp } from '@/contexts/AppContext';
+import { Audio } from 'expo-av';
+
+const Logo = require('@/assets/images/logo.png');
+const Glasses = require('@/assets/images/glasses.png');
+const Battery = require('@/assets/images/battery.png');
+const Circle = require('@/assets/images/circle.png');
+const Thermometer = require('@/assets/images/termometer.png');
+const Clock = require('@/assets/images/clock.png');
+const Warning = require('@/assets/images/warning.png');
+const Sound = require('@/assets/images/sound.png');
+const Bluetooth = require('@/assets/images/bluetooth.png');
+const Switch = require('@/assets/images/switch.png');
 
 export default function HomeScreen() {
-  const [isTesting, setIsTesting] = useState(false);
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { mode, setMode, connectionStatus, setConnectionStatus, volume } = useApp();
 
-  const handleTestAudio = async () => {
+  const handleTestSound = async () => {
     try {
-      setIsTesting(true);
-      await hapticsService.impact('medium');
-      await ttsService.speak('Bem-vindo ao PDC Visual. Sistema de áudio funcionando corretamente!');
-      await hapticsService.impact('light');
+      console.log('Testando som com feedback');
+      const { sound } = await Audio.Sound.createAsync(
+        require('@/assets/sounds/beep.mp4'),
+        { shouldPlay: true, volume: volume / 100 }
+      );
+      
+      await sound.playAsync();
+      
+      setTimeout(() => {
+        sound.unloadAsync();
+      }, 1000);
+      
     } catch (error) {
-      console.error('Erro ao testar áudio:', error);
-    } finally {
-      setTimeout(() => setIsTesting(false), 2000);
+      console.log('Erro no som, usando fallback:', error);
     }
   };
 
+  const handleChangeMode = () => {
+    const newMode = mode === 'som' ? 'vibração' : 'som';
+    setMode(newMode);
+    console.log(`Modo alterado para ${newMode}`);
+  };
+
+  const handleConnectBluetooth = () => {
+    const newStatus = connectionStatus === 'desconectado' ? 'conectado' : 'desconectado';
+    setConnectionStatus(newStatus);
+    console.log(`Status alterado para ${newStatus}`);
+  };
+
   return (
-    <ScrollView
-      style={[styles.container, isDark && styles.containerDark]}
-      contentContainerStyle={styles.content}
-    >
-      <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <IconSymbol name="eye.fill" size={80} color="#2196F3" />
+    <ScrollView style={styles.container}>
+      <Image 
+        source={Logo} 
+        style={styles.logo}
+        resizeMode="contain"
+        accessibilityLabel="Logo do aplicativo Lucoi"
+      />
+
+      <View style={styles.card}>
+        <View style={styles.rowBetween}>
+          <View style={styles.iconTextRow}>
+            <Image 
+              source={Glasses} 
+              style={styles.largeIcon}
+              resizeMode="contain"
+              accessibilityLabel="Óculos inteligentes"
+            />
+            <View>
+              <Text 
+                style={styles.largeStatusText}
+                accessibilityLabel="Dispositivo ligado"
+              >
+                Dispositivo ligado!
+              </Text>
+              <Text 
+                style={styles.subText}
+                accessibilityLabel={`Tempo estimado de duração da bateria: 2 horas e 30 minutos`}
+              >
+                2h 30min
+              </Text>
+            </View>
+          </View>
         </View>
-        <Text style={[styles.title, isDark && styles.textDark]}>PDC Visual</Text>
-        <Text style={[styles.subtitle, isDark && styles.textSecondaryDark]}>
-          Sistema de Detecção e Alertas
-        </Text>
+
+        <View style={styles.rowBetween}>
+          <View style={styles.iconTextRow}>
+            <Image 
+              source={Battery} 
+              style={styles.smallIcon}
+              resizeMode="contain"
+              accessibilityLabel="Bateria"
+            />
+            <Text 
+              style={styles.subText}
+              accessibilityLabel={`Bateria em 100 por cento`}
+            >
+              100%
+            </Text>
+          </View>
+          <View 
+            style={[
+              styles.connectedTag,
+              connectionStatus === 'conectado' ? styles.connectedTagActive : styles.connectedTagInactive
+            ]}
+            accessibilityLabel={`Status de conexão: ${connectionStatus === 'conectado' ? 'conectado' : 'desconectado'}`}
+          >
+            <Image
+              source={Circle}
+              style={styles.circle}
+              resizeMode="contain"
+              accessibilityLabel="Indicador de status"
+            />
+            <Text style={styles.connectedText}>
+              {connectionStatus === 'conectado' ? 'Conectado' : 'Desconectado'}
+            </Text>
+          </View>
+        </View>
       </View>
 
-      <TouchableOpacity
-        style={[styles.testButton, isTesting && styles.testButtonActive]}
-        onPress={handleTestAudio}
-        disabled={isTesting}
-        activeOpacity={0.8}
-      >
-        <IconSymbol
-          name={isTesting ? "speaker.wave.3.fill" : "speaker.wave.2.fill"}
-          size={32}
-          color="#fff"
-        />
-        <Text style={styles.testButtonText}>
-          {isTesting ? 'Testando...' : 'Testar Áudio'}
+      <View style={styles.card}>
+        <Text 
+          style={styles.sectionTitle}
+          accessibilityLabel="Histórico"
+        >
+          Histórico
         </Text>
+        <View style={styles.horizontalCardsContainer}>
+          <View style={styles.subCard}>
+            <Image 
+              source={Thermometer} 
+              style={styles.smallIcon}
+              resizeMode="contain"
+              accessibilityLabel="Termômetro"
+            />
+            <Text 
+              style={styles.subCardText}
+              accessibilityLabel="Temperatura média detectada: 32 graus Celsius"
+            >
+              32°C
+            </Text>
+          </View>
+          
+          <View style={styles.subCard}>
+            <Image 
+              source={Clock} 
+              style={styles.smallIcon}
+              resizeMode="contain"
+              accessibilityLabel="Relógio"
+            />
+            <Text 
+              style={styles.subCardText}
+              accessibilityLabel="Tempo médio de uso do dispositivo: 5 horas"
+            >
+              5h
+            </Text>
+          </View>
+          
+          <View style={styles.subCard}>
+            <Image 
+              source={Warning} 
+              style={styles.smallIcon}
+              resizeMode="contain"
+              accessibilityLabel="Aviso"
+            />
+            <Text 
+              style={styles.subCardText}
+              accessibilityLabel="3 avisos detectados"
+            >
+              3 avisos
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <TouchableOpacity 
+        style={styles.buttonCard}
+        onPress={handleTestSound} // Use handleTestSoundSimple para versão mais simples
+        accessibilityRole="button"
+        accessibilityLabel="Botão testar som"
+        accessibilityHint="Pressione para testar o som do dispositivo. Será emitido um beep."
+      >
+        <View style={styles.rowBetween}>
+          <View style={styles.iconTextRow}>
+            <Image 
+              source={Sound} 
+              style={styles.smallIcon}
+              resizeMode="contain"
+              accessibilityLabel="Ícone de som"
+            />
+            <Text style={styles.buttonText}>Testar som</Text>
+          </View>
+          <View style={styles.sliderContainer}>
+            <View style={[styles.slider, { width: `${volume}%` }]} />
+          </View>
+        </View>
       </TouchableOpacity>
+
+      <View style={styles.buttonsRow}>
+        <TouchableOpacity 
+          style={styles.button2}
+          onPress={handleChangeMode}
+          accessibilityRole="button"
+          accessibilityLabel={`Botão mudar modo. Modo atual: ${mode === 'som' ? 'som' : 'vibração'}`}
+          accessibilityHint={`Pressione para alterar o modo. Ao pressionar será anunciado: modo alterado para ${mode === 'som' ? 'vibração' : 'som'}`}
+        >
+          <Image 
+            source={Switch} 
+            style={styles.smallIcon}
+            resizeMode="contain"
+            accessibilityLabel="Ícone de alternância"
+          />
+          <Text style={styles.buttonText}>
+            Modo: {mode === 'som' ? 'Som' : 'Vibração'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.button2}
+          onPress={handleConnectBluetooth}
+          accessibilityRole="button"
+          accessibilityLabel={`Botão ${connectionStatus === 'conectado' ? 'desconectar' : 'conectar'} Bluetooth. Status atual: ${connectionStatus}`}
+          accessibilityHint={`Pressione para ${connectionStatus === 'conectado' ? 'desconectar' : 'conectar'} o Bluetooth. Ao pressionar será anunciado: ${connectionStatus === 'conectado' ? 'desconectado' : 'conectado'}`}
+        >
+          <Image 
+            source={Bluetooth} 
+            style={styles.smallIcon}
+            resizeMode="contain"
+            accessibilityLabel="Ícone Bluetooth"
+          />
+          <Text style={styles.buttonText}>
+            {connectionStatus === 'conectado' ? 'Desconectar' : 'Conectar'} Bluetooth
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.card}>
+        <Text 
+          style={styles.sectionTitle}
+          accessibilityLabel="Transcrição de objetos"
+        >
+          Transcrição de objetos
+        </Text>
+        <Text 
+          style={styles.lorem}
+          accessibilityLabel="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
+        >
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  containerDark: { backgroundColor: '#121212' },
-  content: { padding: 20, paddingTop: 40 },
-  header: { alignItems: 'center', marginBottom: 40 },
-  iconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#E3F2FD', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  title: { fontSize: 36, fontWeight: 'bold', color: '#000', marginBottom: 8 },
-  textDark: { color: '#fff' },
-  subtitle: { fontSize: 16, color: '#666', textAlign: 'center' },
-  textSecondaryDark: { color: '#999' },
-  testButton: { backgroundColor: '#2196F3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 20, borderRadius: 16, marginBottom: 32, gap: 12, shadowColor: '#2196F3', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
-  testButtonActive: { backgroundColor: '#1976D2', transform: [{ scale: 0.98 }] },
-  testButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-});
