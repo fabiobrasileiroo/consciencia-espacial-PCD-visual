@@ -72,7 +72,12 @@ export default function HomeScreen() {
             <CardHeader>
               <View className="flex-row items-center gap-3 mb-2">
                 <View className="p-3 rounded-full">
-                  <IconSymbol name="eyeglasses" size={28} color="#fff" />
+                  {/* <IconSymbol name="eyeglasses" size={28} color="#fff" /> */}
+                  <Image
+                    source={{ uri: 'https://i.ibb.co/twQ1VvGY/glasses.png' }}
+                    className="w-12 h-12 mx-auto"
+                    resizeMode="contain"
+                  />
                 </View>
                 <View className="flex-1">
                   <CardTitle>Dispositivo ligado</CardTitle>
@@ -83,7 +88,7 @@ export default function HomeScreen() {
             <CardContent>
               <View className="flex-row justify-between items-center">
                 <View className="ml-4 flex-row items-center gap-3">
-                  <Battery  percent={battery} width={40} height={20} />
+                  <Battery percent={battery} width={40} height={20} />
                   <Text className="text-white font-semibold text-base">{battery}%</Text>
                 </View>
                 <View className="bg-[#4CAF50] px-4 py-2 rounded-full">
@@ -136,7 +141,7 @@ export default function HomeScreen() {
           </Card>
           <View className="flex-row gap-3 mb-5">
             <TouchableOpacity
-              className="flex-1 bg-[#4a5266] py-4 rounded-xl flex-row items-center justify-center gap-2"
+              className="flex-1 bg-[#404C72] py-4 rounded-xl flex-row items-center justify-center gap-2"
               onPress={handleChangeMode}
               activeOpacity={0.7}
             >
@@ -144,7 +149,7 @@ export default function HomeScreen() {
               <Text className="text-white text-base font-semibold">Mudar modo</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              className="flex-1 bg-[#4a5266] py-4 rounded-xl flex-row items-center justify-center gap-2"
+              className="flex-1 bg-[#404C72] py-4 rounded-xl flex-row items-center justify-center gap-2"
               onPress={handleConnectBluetooth}
               activeOpacity={0.7}
             >
@@ -156,8 +161,8 @@ export default function HomeScreen() {
             <CardHeader>
               <CardTitle>Transcrição de objetos</CardTitle>
             </CardHeader>
-            <CardContent>
-              <Text className="text-base text-gray-300 leading-6">
+            <CardContent  >
+              <Text className="bg-[#303850] border border-slate-700 p-4 rounded-xl text-base text-white leading-6">
                 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
                 incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
                 exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure
