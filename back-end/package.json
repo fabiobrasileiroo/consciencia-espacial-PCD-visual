@@ -1,0 +1,31 @@
+{
+  "name": "pcd-vision-backend",
+  "version": "1.0.0",
+  "description": "Backend servidor para receber detecções de objetos do ESP32-CAM",
+  "main": "server-vision.js",
+  "scripts": {
+    "start": "node server-vision.js",
+    "dev": "nodemon server-vision.js",
+    "test": "curl http://localhost:3000/api/status"
+  },
+  "keywords": [
+    "esp32",
+    "computer-vision",
+    "accessibility",
+    "pcd",
+    "websocket"
+  ],
+  "author": "InovaTech 2025",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
