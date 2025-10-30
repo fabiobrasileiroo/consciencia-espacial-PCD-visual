@@ -5,8 +5,10 @@ API NestJS profissional para receber e processar dados de detecção de objetos 
 ## ✨ Características
 
 - 🎯 **API RESTful** completa com NestJS
-- 📡 **Server-Sent Events (SSE)** para streaming de dados em tempo real
+- � **WebSocket (Socket.IO)** para comunicação bidirecional com ESP32
+- �📡 **Server-Sent Events (SSE)** para streaming de dados em tempo real
 - 📚 **Documentação Swagger** interativa e completa
+- ⚙️ **Controle Remoto** de ESP32 (ajustar FPS, resolução, modos)
 - ✅ **Validação de dados** com class-validator
 - 🐳 **Docker e Docker Compose** para deploy simplificado
 - 📊 **Histórico de detecções** com estatísticas
@@ -14,11 +16,31 @@ API NestJS profissional para receber e processar dados de detecção de objetos 
 - 🎨 **TypeScript** com tipagem forte
 - 🧪 **Estrutura preparada para testes**
 
-## 📋 Pré-requisitos
+## � Arquitetura de Comunicação
+
+### WebSocket (Socket.IO)
+
+- **ESP32 → Servidor**: Envio de detecções em tempo real
+- **Servidor → ESP32**: Comandos de configuração (FPS, resolução, modos)
+- **Servidor → Apps**: Broadcast de detecções para dashboards
+
+### HTTP REST
+
+- Envio alternativo de detecções (fallback)
+- Endpoints de consulta (histórico, estatísticas)
+- Gerenciamento de comandos via API
+
+### SSE (Server-Sent Events)
+
+- Streaming unidirecional para web dashboards
+- Atualizações em tempo real sem WebSocket
+
+## �📋 Pré-requisitos
 
 - Node.js 18+ ou Docker
 - pnpm (recomendado) ou npm
 - ESP32-CAM configurado
+- Biblioteca SocketIOclient para ESP32 (WebSocket)
 
 ## 🚀 Instalação
 
@@ -249,7 +271,159 @@ Verifica status do servidor.
 }
 ```
 
-## 📚 Documentação Swagger
+## � Integração WebSocket com ESP32
+
+### Fluxo de Comunicação
+
+1. **ESP32 conecta** ao servidor WebSocket (namespace `/vision`)
+2. **ESP32 registra** seu `moduleId` via evento `register_esp32`
+3. **ESP32 envia detecções** via evento `detection`
+4. **Servidor confirma** recebimento com `detection_ack`
+5. **Servidor pode enviar comandos** via evento `command`
+
+### Código ESP32 (Arduino)
+
+Veja o exemplo completo em `examples/esp32-websocket-client.ino`
+
+**Bibliotecas necessárias:**
+
+```cpp
+#include <WiFi.h>
+#include <SocketIOclient.h>
+#include <ArduinoJson.h>
+```
+
+**Instalação via PlatformIO:**
+
+```ini
+lib_deps =
+    links2004/WebSockets @ ^2.3.7
+    bblanchon/ArduinoJson @ ^6.21.0
+```
+
+**Configuração básica:**
+
+```cpp
+SocketIOclient socketIO;
+const char* MODULE_ID = "ESP32_CAM_001";
+
+void setup() {
+  // Conectar ao servidor
+  socketIO.begin("192.168.1.100", 3000, "/socket.io/?EIO=4&transport=websocket");
+  socketIO.onEvent(webSocketEvent);
+}
+
+void loop() {
+  socketIO.loop();
+  // Enviar detecções periodicamente
+}
+```
+
+**Eventos ESP32 → Servidor:**
+
+- `register_esp32`: Registrar módulo
+
+  ```json
+  { "moduleId": "ESP32_CAM_001" }
+  ```
+
+- `detection`: Enviar detecção
+  ```json
+  {
+    "moduleId": "ESP32_CAM_001",
+    "timestamp": "2025-01-08T14:30:00.000Z",
+    "objects": [...],
+    "metrics": {...}
+  }
+  ```
+
+**Eventos Servidor → ESP32:**
+
+- `connected`: Confirmação de conexão
+- `registered`: Confirmação de registro
+- `detection_ack`: Confirmação de recebimento de detecção
+- `command`: Comando de controle remoto
+
+### Comandos Disponíveis
+
+O servidor pode enviar comandos para o ESP32 via WebSocket ou REST API.
+
+#### Via REST API
+
+**Endpoint:** `POST /api/vision/command/:moduleId`
+
+**Exemplo: Ajustar FPS**
+
+```bash
+curl -X POST http://localhost:3000/api/vision/command/ESP32_CAM_001 \
+  -H "Content-Type: application/json" \
+  -d '{"command":"setFPS","data":{"fps":15}}'
+```
+
+**Exemplo: Mudar Resolução**
+
+```bash
+curl -X POST http://localhost:3000/api/vision/command/ESP32_CAM_001 \
+  -H "Content-Type: application/json" \
+  -d '{"command":"setResolution","data":{"resolution":"HD"}}'
+```
+
+**Exemplo: Reiniciar ESP32**
+
+```bash
+curl -X POST http://localhost:3000/api/vision/command/ESP32_CAM_001 \
+  -H "Content-Type: application/json" \
+  -d '{"command":"reboot"}'
+```
+
+#### Comandos Broadcast (Todos ESP32)
+
+**Endpoint:** `POST /api/vision/command/broadcast`
+
+```bash
+curl -X POST http://localhost:3000/api/vision/command/broadcast \
+  -H "Content-Type: application/json" \
+  -d '{"command":"setFPS","data":{"fps":10}}'
+```
+
+#### Tipos de Comandos
+
+| Comando         | Descrição               | Dados                                               |
+| --------------- | ----------------------- | --------------------------------------------------- |
+| `setFPS`        | Ajusta taxa de FPS      | `{ fps: 1-30 }`                                     |
+| `setResolution` | Muda resolução          | `{ resolution: "VGA"\|"SVGA"\|"XGA"\|"HD"\|"FHD" }` |
+| `setThreshold`  | Define confiança mínima | `{ threshold: 0.0-1.0 }`                            |
+| `toggleMode`    | Altera modo de operação | `{ mode: "continuous"\|"ondemand"\|"scheduled" }`   |
+| `reboot`        | Reinicia o ESP32        | `{}`                                                |
+| `calibrate`     | Recalibra sensores      | `{}`                                                |
+| `getStatus`     | Solicita status atual   | `{}`                                                |
+
+### Verificar ESP32 Conectados
+
+```bash
+curl http://localhost:3000/api/vision/esp32/connected
+```
+
+**Resposta:**
+
+```json
+{
+  "total": 3,
+  "modules": ["ESP32_CAM_001", "ESP32_CAM_002", "ESP32_CAM_003"],
+  "timestamp": "2025-01-08T14:30:00.000Z"
+}
+```
+
+### Teste de WebSocket no Navegador
+
+Abra `examples/websocket-test.html` no navegador para:
+
+- ✅ Simular ESP32 conectando e enviando detecções
+- ✅ Enviar comandos para ESP32
+- ✅ Ver detecções em tempo real (broadcast)
+- ✅ Monitorar log de eventos WebSocket
+
+## �📚 Documentação Swagger
 
 Acesse a documentação interativa em:
 
@@ -260,7 +434,21 @@ A documentação Swagger permite testar todos os endpoints diretamente no navega
 
 ## 🔧 Configuração do ESP32
 
-Configure o ESP32 para enviar dados para:
+### Opção 1: WebSocket (Recomendado)
+
+Configure o ESP32 para conectar via WebSocket:
+
+```cpp
+const char* serverIP = "192.168.100.11";
+const int serverPort = 3000;
+const char* MODULE_ID = "ESP32_CAM_001";
+
+socketIO.begin(serverIP, serverPort, "/socket.io/?EIO=4&transport=websocket");
+```
+
+### Opção 2: HTTP POST (Fallback)
+
+Ou use HTTP POST tradicional:
 
 ```cpp
 const char* serverUrl = "http://192.168.100.11:3000/api/vision";

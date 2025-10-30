@@ -10,6 +10,8 @@ import {
   HttpCode,
   HttpStatus,
   Delete,
+  Param,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,18 +19,24 @@ import {
   ApiResponse,
   ApiBody,
   ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { Observable, interval, map, merge } from 'rxjs';
 import { VisionService } from './vision.service';
 import { VisionDetectionDto } from './dto/vision-detection.dto';
 import { VisionResponseDto } from './dto/vision-response.dto';
+import { CommandDto, CommandResponseDto } from './dto/command.dto';
+import { VisionGateway } from './vision.gateway';
 
 @ApiTags('vision')
 @Controller('api/vision')
 export class VisionController {
   private readonly logger = new Logger(VisionController.name);
 
-  constructor(private readonly visionService: VisionService) { }
+  constructor(
+    private readonly visionService: VisionService,
+    private readonly visionGateway: VisionGateway,
+  ) { }
 
   @Post()
   @HttpCode(HttpStatus.OK)
@@ -300,5 +308,194 @@ export class VisionController {
   })
   clearHistory() {
     this.visionService.clearHistory();
+  }
+
+  @Post('command/:moduleId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '📡 Envia comando para ESP32 específico',
+    description: `
+## Controle Remoto de ESP32
+
+Envia um comando para um ESP32-CAM específico via WebSocket.
+
+### ⚙️ Comandos Disponíveis
+
+| Comando | Descrição | Dados Requeridos |
+|---------|-----------|------------------|
+| \`setFPS\` | Define taxa de FPS | \`{ fps: 1-30 }\` |
+| \`setResolution\` | Altera resolução da câmera | \`{ resolution: "VGA"\|"SVGA"\|"XGA"\|"HD"\|"FHD" }\` |
+| \`setThreshold\` | Define confiança mínima | \`{ threshold: 0.0-1.0 }\` |
+| \`toggleMode\` | Altera modo de operação | \`{ mode: "continuous"\|"ondemand"\|"scheduled" }\` |
+| \`reboot\` | Reinicia o ESP32 | \`{}\` |
+| \`calibrate\` | Recalibra sensores | \`{}\` |
+| \`getStatus\` | Solicita status atual | \`{}\` |
+
+### 📋 Exemplos de Uso
+
+**Ajustar FPS para 15:**
+\`\`\`json
+{
+  "command": "setFPS",
+  "data": { "fps": 15 }
+}
+\`\`\`
+
+**Mudar resolução para HD:**
+\`\`\`json
+{
+  "command": "setResolution",
+  "data": { "resolution": "HD" }
+}
+\`\`\`
+
+**Reiniciar ESP32:**
+\`\`\`json
+{
+  "command": "reboot"
+}
+\`\`\`
+    `,
+  })
+  @ApiParam({
+    name: 'moduleId',
+    description: 'ID do módulo ESP32 de destino',
+    example: 'ESP32_CAM_001',
+  })
+  @ApiBody({
+    type: CommandDto,
+    description: 'Comando a ser enviado',
+    examples: {
+      setFPS: {
+        summary: 'Ajustar FPS',
+        value: { command: 'setFPS', data: { fps: 15 } },
+      },
+      setResolution: {
+        summary: 'Mudar Resolução',
+        value: { command: 'setResolution', data: { resolution: 'HD' } },
+      },
+      reboot: {
+        summary: 'Reiniciar ESP32',
+        value: { command: 'reboot' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Comando enviado com sucesso',
+    type: CommandResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'ESP32 não encontrado ou desconectado',
+  })
+  sendCommand(
+    @Param('moduleId') moduleId: string,
+    @Body() commandDto: CommandDto,
+  ): CommandResponseDto {
+    const sent = this.visionGateway.sendCommandToESP32(
+      moduleId,
+      commandDto.command,
+      commandDto.data,
+    );
+
+    if (!sent) {
+      throw new NotFoundException(
+        `ESP32 ${moduleId} não está conectado via WebSocket`,
+      );
+    }
+
+    return {
+      success: true,
+      moduleId,
+      command: commandDto.command,
+      message: 'Comando enviado com sucesso',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('command/broadcast')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '📡 Broadcast de comando para todos ESP32',
+    description: `
+## Comando em Massa
+
+Envia um comando para **todos os ESP32** conectados simultaneamente.
+
+Útil para:
+- Sincronizar configurações
+- Reiniciar toda a rede de câmeras
+- Ajustar FPS globalmente
+- Calibração em massa
+    `,
+  })
+  @ApiBody({
+    type: CommandDto,
+    description: 'Comando a ser transmitido',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Comando enviado para todos os ESP32',
+    schema: {
+      example: {
+        success: true,
+        command: 'setFPS',
+        sentTo: 3,
+        modules: ['ESP32_CAM_001', 'ESP32_CAM_002', 'ESP32_CAM_003'],
+        message: 'Comando enviado para 3 módulos',
+        timestamp: '2025-01-08T14:30:00.000Z',
+      },
+    },
+  })
+  broadcastCommand(@Body() commandDto: CommandDto) {
+    const sentCount = this.visionGateway.broadcastCommandToAllESP32(
+      commandDto.command,
+      commandDto.data,
+    );
+
+    const connectedModules = this.visionGateway.getConnectedESP32();
+
+    return {
+      success: true,
+      command: commandDto.command,
+      sentTo: sentCount,
+      modules: connectedModules,
+      message: `Comando enviado para ${sentCount} módulos`,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('esp32/connected')
+  @ApiOperation({
+    summary: '🔌 Lista ESP32 conectados via WebSocket',
+    description: `
+Retorna a lista de todos os ESP32 atualmente conectados ao servidor via WebSocket.
+
+Inclui:
+- IDs dos módulos
+- Total de conexões ativas
+- Timestamp da consulta
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de ESP32 conectados',
+    schema: {
+      example: {
+        total: 3,
+        modules: ['ESP32_CAM_001', 'ESP32_CAM_002', 'ESP32_CAM_003'],
+        timestamp: '2025-01-08T14:30:00.000Z',
+      },
+    },
+  })
+  getConnectedESP32() {
+    const modules = this.visionGateway.getConnectedESP32();
+
+    return {
+      total: modules.length,
+      modules,
+      timestamp: new Date().toISOString(),
+    };
   }
 }
