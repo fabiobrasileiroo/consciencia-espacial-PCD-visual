@@ -3,10 +3,16 @@
   "version": "1.0.0",
   "description": "Backend servidor para receber detecções de objetos do ESP32-CAM",
   "main": "server-vision.js",
+  "type": "module",
   "scripts": {
-    "start": "node server-vision.js",
-    "dev": "nodemon server-vision.js",
-    "test": "curl http://localhost:3000/api/status"
+    "start": "node server-vision-cam.js",
+    "start:capture": "node server-vision-cam.js",
+    "start:streaming": "node server-vision-streaming.js",
+    "start:old": "node server-vision.js",
+    "dev": "nodemon server-vision-cam.js",
+    "dev:streaming": "nodemon server-vision-streaming.js",
+    "test": "curl http://localhost:3000/api/status",
+    "test:esp32": "curl http://localhost:3000/api/esp32/test"
   },
   "keywords": [
     "esp32",
@@ -18,9 +24,14 @@
   "author": "InovaTech 2025",
   "license": "MIT",
   "dependencies": {
+    "@tensorflow-models/coco-ssd": "^2.2.3",
+    "@tensorflow/tfjs-node": "^4.22.0",
+    "@tensorflow/tfjs-node-gpu": "^4.22.0",
+    "axios": "^1.13.1",
+    "canvas": "^3.2.0",
+    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "ws": "^8.14.2",
-    "cors": "^2.8.5"
+    "ws": "^8.14.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
