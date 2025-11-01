@@ -19,11 +19,11 @@ RUN apt-get update && apt-get install -y \
 # Criar diretório de trabalho
 WORKDIR /app
 
-# Copiar package.json e package-lock.json
-COPY package*.json ./
+# Copiar arquivos de dependências
+COPY package.json package-lock.json* ./
 
-# Instalar dependências com npm (incluindo devDependencies para build)
-RUN npm ci
+# Instalar dependências (usa npm ci se houver lock, senão npm install)
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Recompilar TensorFlow.js native bindings
 RUN npm rebuild @tensorflow/tfjs-node --build-addon-from-source

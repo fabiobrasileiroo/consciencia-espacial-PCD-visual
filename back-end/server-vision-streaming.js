@@ -21,9 +21,13 @@ const app = express();
 
 // app.use('/static', express.static(join(__dirname, 'public')));
 
-const PORT = 3000;
+// Usar porta do ambiente (Render, Heroku, etc.) ou 3000 local
+const PORT = process.env.PORT || 3000;
 const WS_PORT = 8080;
 const ESP32_WS_PORT = 8081;  // Nova porta para receber dados do ESP32-PAI
+
+// Base URL para produção (ex: https://meu-projeto.onrender.com)
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 // ===== CONFIGURAÇÃO DO ESP32-CAM =====
 const ESP32_CAM_CONFIG = {
@@ -130,12 +134,8 @@ http://localhost:${PORT}/viewer
     },
     servers: [
       {
-        url: `http://localhost:${PORT}`,
-        description: 'Servidor Local',
-      },
-      {
-        url: `http://192.168.100.11:${PORT}`,
-        description: 'Rede Local',
+        url: BASE_URL,
+        description: process.env.NODE_ENV === 'production' ? 'Servidor de Produção' : 'Servidor Local',
       },
     ],
     tags: [
@@ -613,35 +613,184 @@ async function startCaptureProcessing() {
   console.log('✅ Loop de captura iniciado!\n');
 }
 
-// ===== WEBSOCKET SERVER (CLIENTES MOBILE) =====
-const wss = new WebSocketServer({ port: WS_PORT }, () => {
-  console.log(`🔌 WebSocket Server: ws://localhost:${WS_PORT}`);
-});
+// ===== INICIAR SERVIDOR =====
+async function startServer() {
+  try {
+    // 1. Carregar modelo TensorFlow
+    await loadModel();
 
-wss.on('connection', (ws) => {
-  console.log('📱 Cliente mobile conectado');
+    // 2. Iniciar servidor HTTP
+    const server = app.listen(PORT, () => {
+      console.log('\n╔══════════════════════════════════════════╗');
+      console.log('║  👁️  SERVIDOR DE VISÃO COM ESP32-CAM   ║');
+      console.log('╚══════════════════════════════════════════╝\n');
+      console.log(`🌐 HTTP Server: ${BASE_URL}`);
+      console.log(`🔌 WebSocket: ws://localhost:${PORT} (mesmo servidor HTTP)`);
+      console.log(`📡 ESP32-CAM IP: ${ESP32_CAM_CONFIG.ip}`);
+      console.log(`📍 Endpoint ESP32: /${ESP32_CAM_CONFIG.endpoint} ${ESP32_CAM_CONFIG.endpoint === 'stream' ? '📹' : '📸'}`);
+      console.log(`🎬 Modo: ${ESP32_CAM_CONFIG.useStreaming ? '📹 STREAMING' : '📸 CAPTURA'}`);
+      console.log(`⏱️  Intervalo: ${ESP32_CAM_CONFIG.captureInterval}ms`);
+      console.log(`🎯 Confiança mínima: ${(ESP32_CAM_CONFIG.minConfidence * 100).toFixed(0)}%`);
+      console.log('\n📋 Endpoints disponíveis:');
+      console.log(`   GET    ${BASE_URL}/api/esp32/test`);
+      console.log(`   GET    ${BASE_URL}/api/esp32/capture`);
+      console.log(`   GET    ${BASE_URL}/api/esp32/capture-image ✨`);
+      console.log(`   GET    ${BASE_URL}/api/esp32/stream`);
+      console.log(`   POST   ${BASE_URL}/api/esp32/config`);
+      console.log(`   GET    ${BASE_URL}/api/status`);
+      console.log('\n📚 Documentação Swagger:');
+      console.log(`   👉 ${BASE_URL}/api/docs`);
+      console.log('\n🖼️  Visualizador Web:');
+      console.log(`   👉 ${BASE_URL}/viewer`);
+      console.log('\n📸 API de Imagem com Detecções:');
+      console.log(`   ${BASE_URL}/api/esp32/capture-image`);
+      console.log('\n✅ Servidor pronto!\n');
+    });
 
-  // Enviar histórico recente
-  ws.send(JSON.stringify({
-    type: 'history',
-    data: detectionHistory.slice(-10)
-  }));
+    // 3. Configurar WebSocket no mesmo servidor HTTP (compatível com Render)
+    setupWebSockets(server);
 
-  // Enviar última detecção
-  if (lastDetections.length > 0) {
-    ws.send(JSON.stringify({
-      type: 'current',
-      data: {
-        description: generateDescription(lastDetections),
-        objects: lastDetections
+    // 4. Aguardar 2 segundos e iniciar processamento
+    setTimeout(() => {
+      if (ESP32_CAM_CONFIG.useStreaming) {
+        connectToStream();
+      } else {
+        startCaptureProcessing();
       }
-    }));
-  }
+    }, 2000);
 
-  ws.on('close', () => {
-    console.log('📱 Cliente mobile desconectado');
+    // 5. Iniciar broadcast periódico de status via SSE (a cada 2 segundos)
+    setInterval(() => {
+      if (sseClients.size > 0) {
+        // Broadcast uptime
+        broadcastSSE('uptime', {
+          seconds: Math.floor((Date.now() - SERVER_START_TIME) / 1000),
+          formatted: formatUptime(Math.floor((Date.now() - SERVER_START_TIME) / 1000))
+        });
+
+        // Broadcast system status
+        broadcastSSE('system-status', {
+          modelLoaded: model !== null,
+          esp32: esp32Status,
+          connections: {
+            websocket: wss.clients.size,
+            sse: sseClients.size
+          },
+          mode: ESP32_CAM_CONFIG.useStreaming ? 'streaming' : 'capture'
+        });
+
+        // Broadcast current detections
+        broadcastCurrentDetections();
+      }
+    }, 2000); // Reduzido para 2s para atualizações mais frequentes
+
+  } catch (error) {
+    console.error('❌ Erro ao iniciar servidor:', error);
+    process.exit(1);
+  }
+}
+
+// ===== CONFIGURAR WEBSOCKETS (UNIFICADO NO MESMO SERVIDOR HTTP) =====
+let wss;
+let esp32WebSocketServer;
+let esp32PaiConnection = null;
+
+function setupWebSockets(httpServer) {
+  // WebSocket para clientes mobile (app)
+  wss = new WebSocketServer({ 
+    server: httpServer,
+    path: '/ws'
   });
-});
+
+  console.log(`🔌 WebSocket para App Mobile: ws://localhost:${PORT}/ws`);
+
+  wss.on('connection', (ws) => {
+    console.log('📱 Cliente mobile conectado');
+
+    // Enviar histórico recente
+    ws.send(JSON.stringify({
+      type: 'history',
+      data: detectionHistory.slice(-10)
+    }));
+
+    // Enviar última detecção
+    if (lastDetections.length > 0) {
+      ws.send(JSON.stringify({
+        type: 'current',
+        data: {
+          description: generateDescription(lastDetections),
+          objects: lastDetections
+        }
+      }));
+    }
+
+    ws.on('close', () => {
+      console.log('📱 Cliente mobile desconectado');
+    });
+  });
+
+  // WebSocket para ESP32-PAI
+  esp32WebSocketServer = new WebSocketServer({ 
+    server: httpServer,
+    path: '/esp32'
+  });
+
+  console.log(`🔌 WebSocket para ESP32-PAI: ws://localhost:${PORT}/esp32`);
+  console.log(`   Configure o ESP32-PAI com: ws://<seu-ip>:${PORT}/esp32\n`);
+
+  esp32WebSocketServer.on('connection', (ws, req) => {
+    const clientIp = req.socket.remoteAddress;
+    console.log(`\n🤝 ESP32 conectado: ${clientIp}`);
+    
+    esp32PaiConnection = ws;
+    
+    // Enviar mensagem de boas-vindas
+    ws.send(JSON.stringify({
+      type: 'connected',
+      message: 'Servidor Node.js pronto!',
+      timestamp: Date.now()
+    }));
+
+    // Receber mensagens do ESP32
+    ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        handleESP32Message(message);
+      } catch (err) {
+        console.error('❌ Erro ao processar mensagem ESP32:', err);
+      }
+    });
+
+    // Tratar desconexão
+    ws.on('close', () => {
+      console.log('❌ ESP32 desconectado');
+      esp32PaiConnection = null;
+      
+      // Marcar todos os módulos como offline
+      updateESP32Status('pai', false);
+      updateESP32Status('sensor', false);
+      updateESP32Status('motor', false);
+      updateESP32Status('camera', false);
+    });
+
+    ws.on('error', (err) => {
+      console.error('❌ Erro WebSocket ESP32:', err);
+    });
+
+    // Enviar ping a cada 30s para manter conexão viva
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.ping();
+      } else {
+        clearInterval(pingInterval);
+      }
+    }, 30000);
+  });
+
+  esp32WebSocketServer.on('error', (err) => {
+    console.error('❌ Erro no servidor WebSocket ESP32:', err);
+  });
+}
 
 // Broadcast para clientes
 function broadcastToClients(data) {
@@ -2009,72 +2158,16 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// ===== WEBSOCKET PARA RECEBER DADOS DO ESP32-PAI =====
-let esp32WebSocketServer;
-let esp32PaiConnection = null;
+// ===== FUNÇÕES AUXILIARES ESP32 =====
+function updateESP32Status(module, connected) {
+  if (esp32Status[module]) {
+    esp32Status[module].connected = connected;
+    esp32Status[module].lastSeen = connected ? new Date().toISOString() : esp32Status[module].lastSeen;
+  }
+}
 
-function setupESP32WebSocket() {
-  esp32WebSocketServer = new WebSocketServer({ 
-    port: ESP32_WS_PORT,
-    clientTracking: true
-  });
-
-  console.log(`\n🔌 WebSocket para ESP32 rodando na porta ${ESP32_WS_PORT}`);
-  console.log(`   URL: ws://localhost:${ESP32_WS_PORT}/`);
-  console.log(`   Configure o ESP32-PAI com este endereço!\n`);
-
-  esp32WebSocketServer.on('connection', (ws, req) => {
-    const clientIp = req.socket.remoteAddress;
-    console.log(`\n🤝 ESP32 conectado: ${clientIp}`);
-    
-    esp32PaiConnection = ws;
-    
-    // Enviar mensagem de boas-vindas
-    ws.send(JSON.stringify({
-      type: 'connected',
-      message: 'Servidor Node.js pronto!',
-      timestamp: Date.now()
-    }));
-
-    // Receber mensagens do ESP32
-    ws.on('message', (data) => {
-      try {
-        const message = JSON.parse(data.toString());
-        handleESP32Message(message);
-      } catch (err) {
-        console.error('❌ Erro ao processar mensagem ESP32:', err);
-      }
-    });
-
-    // Tratar desconexão
-    ws.on('close', () => {
-      console.log('❌ ESP32 desconectado');
-      esp32PaiConnection = null;
-      
-      // Marcar todos os módulos como offline
-      updateESP32Status('pai', false);
-      updateESP32Status('sensor', false);
-      updateESP32Status('motor', false);
-      updateESP32Status('camera', false);
-    });
-
-    ws.on('error', (err) => {
-      console.error('❌ Erro WebSocket ESP32:', err);
-    });
-
-    // Enviar ping a cada 30s para manter conexão viva
-    const pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
-      } else {
-        clearInterval(pingInterval);
-      }
-    }, 30000);
-  });
-
-  esp32WebSocketServer.on('error', (err) => {
-    console.error('❌ Erro no servidor WebSocket ESP32:', err);
-  });
+function addSystemAlert(level, message) {
+  addAlert(level, message);
 }
 
 // ===== PROCESSAR MENSAGENS DO ESP32-PAI =====
@@ -2219,6 +2312,5 @@ function sendCommandToESP32(command) {
   }
 }
 
-// Iniciar servidores
-setupESP32WebSocket();  // WebSocket para ESP32
-startServer();          // HTTP + SSE + WebSocket para App
+// Iniciar servidor (HTTP + SSE + WebSockets unificados)
+startServer();

@@ -7,6 +7,10 @@ npm-debug.log
 yarn-error.log
 pnpm-debug.log
 
+# IMPORTANTE: package-lock.json e pnpm-lock.yaml DEVEM ser copiados
+!package-lock.json
+!pnpm-lock.yaml
+
 # Logs
 logs/
 *.log
