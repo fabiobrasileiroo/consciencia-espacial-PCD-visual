@@ -697,7 +697,7 @@ let esp32PaiConnection = null;
 
 function setupWebSockets(httpServer) {
   // WebSocket para clientes mobile (app)
-  wss = new WebSocketServer({ 
+  wss = new WebSocketServer({
     server: httpServer,
     path: '/ws'
   });
@@ -730,7 +730,7 @@ function setupWebSockets(httpServer) {
   });
 
   // WebSocket para ESP32-PAI
-  esp32WebSocketServer = new WebSocketServer({ 
+  esp32WebSocketServer = new WebSocketServer({
     server: httpServer,
     path: '/esp32'
   });
@@ -741,9 +741,9 @@ function setupWebSockets(httpServer) {
   esp32WebSocketServer.on('connection', (ws, req) => {
     const clientIp = req.socket.remoteAddress;
     console.log(`\n🤝 ESP32 conectado: ${clientIp}`);
-    
+
     esp32PaiConnection = ws;
-    
+
     // Enviar mensagem de boas-vindas
     ws.send(JSON.stringify({
       type: 'connected',
@@ -765,7 +765,7 @@ function setupWebSockets(httpServer) {
     ws.on('close', () => {
       console.log('❌ ESP32 desconectado');
       esp32PaiConnection = null;
-      
+
       // Marcar todos os módulos como offline
       updateESP32Status('pai', false);
       updateESP32Status('sensor', false);
@@ -1480,15 +1480,15 @@ app.post('/api/esp32/command', (req, res) => {
   const { command, value } = req.body;
 
   if (!command) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Campo "command" obrigatório' 
+    return res.status(400).json({
+      success: false,
+      error: 'Campo "command" obrigatório'
     });
   }
 
   // Comandos válidos
   const validCommands = ['set_vibration', 'test_motor', 'calibrate_sensor', 'reboot', 'get_status'];
-  
+
   if (!validCommands.includes(command)) {
     return res.status(400).json({
       success: false,
@@ -2140,13 +2140,16 @@ process.on('SIGINT', () => {
 
   isStreamActive = false;
 
-  // Fechar conexões WebSocket
-  wss.clients.forEach((client) => {
-    client.close();
-  });
+  // Fechar conexões WebSocket (mobile app)
+  if (wss && wss.clients) {
+    wss.clients.forEach((client) => {
+      client.close();
+    });
+    console.log('✅ WebSocket App encerrado');
+  }
 
   // Fechar servidor WebSocket ESP32
-  if (esp32WebSocketServer) {
+  if (esp32WebSocketServer && esp32WebSocketServer.clients) {
     esp32WebSocketServer.clients.forEach((client) => {
       client.close();
     });
@@ -2180,7 +2183,7 @@ function handleESP32Message(message) {
       console.log(`✅ ESP32-PAI identificado: ${message.deviceId}`);
       updateESP32Status('pai', true);
       addSystemAlert('info', `ESP32-PAI conectado: ${message.deviceId}`);
-      
+
       // Enviar confirmação
       if (esp32PaiConnection && esp32PaiConnection.readyState === WebSocket.OPEN) {
         esp32PaiConnection.send(JSON.stringify({
@@ -2280,7 +2283,7 @@ function handleESP32Alert(message) {
   const { level, msg, distance } = message;
 
   console.log(`\n🚨 ALERTA ${level.toUpperCase()}: ${msg}`);
-  
+
   // Adicionar ao sistema de alertas
   addSystemAlert(level, msg);
 
