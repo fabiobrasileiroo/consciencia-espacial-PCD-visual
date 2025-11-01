@@ -9,9 +9,10 @@ interface HistoryItemCardProps {
   timestamp: string;
   onPress?: () => void;
   onDelete?: () => void;
+  onTest?: () => void;
 }
 
-export function HistoryItemCard({ text, timestamp, onPress, onDelete }: HistoryItemCardProps) {
+export function HistoryItemCard({ text, timestamp, onPress, onDelete, onTest }: HistoryItemCardProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -46,11 +47,29 @@ export function HistoryItemCard({ text, timestamp, onPress, onDelete }: HistoryI
           </View>
         </View>
 
-        {onDelete && (
-          <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-            <IconSymbol name="trash" size={20} color="#f44336" />
-          </TouchableOpacity>
-        )}
+        <View style={styles.actions}>
+          {onTest && (
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={onTest}
+              accessibilityLabel="Testar transcrição"
+              accessibilityHint="Pressione para enviar esta detecção para teste"
+            >
+              <IconSymbol name="play.circle.fill" size={24} color="#4CAF50" />
+            </TouchableOpacity>
+          )}
+
+          {onDelete && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={onDelete}
+              accessibilityLabel="Deletar"
+              accessibilityHint="Pressione para remover este item do histórico"
+            >
+              <IconSymbol name="trash" size={20} color="#f44336" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -105,6 +124,14 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 12,
     color: '#999',
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  testButton: {
+    padding: 8,
   },
   deleteButton: {
     padding: 8,

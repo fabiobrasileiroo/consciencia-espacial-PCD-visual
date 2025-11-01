@@ -211,4 +211,59 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+
+  // WebSocket status
+  wsStatusTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  wsConnectedTag: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+  },
+  wsDisconnectedTag: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+  },
+  wsCircle: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+  },
+  wsCircleActive: {
+    backgroundColor: '#22C55E',
+  },
+  wsStatusText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  emptyHistoryText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginVertical: 20,
+    fontStyle: 'italic',
+  },
+
+  // Device tags
+  deviceTag: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  deviceTagConnected: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+  },
+  deviceTagDisconnected: {
+    backgroundColor: 'rgba(148, 163, 184, 0.2)',
+  },
+  deviceTagText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
 });
