@@ -1,7 +1,7 @@
 # Dockerfile para Backend Vision (server.js e server-vision-streaming.js)
 # Suporta TensorFlow.js com COCO-SSD para detecção de objetos
 
-FROM node:18-bullseye
+FROM node:22-bullseye
 
 # Instalar dependências do sistema para canvas e TensorFlow
 RUN apt-get update && apt-get install -y \
@@ -19,13 +19,11 @@ RUN apt-get update && apt-get install -y \
 # Criar diretório de trabalho
 WORKDIR /app
 
-# Copiar package.json e instalar dependências
+# Copiar package.json e package-lock.json
 COPY package*.json ./
-COPY pnpm-lock.yaml ./
 
-# Instalar pnpm e dependências
-RUN npm install -g pnpm
-RUN pnpm install --frozen-lockfile
+# Instalar dependências com npm (incluindo devDependencies para build)
+RUN npm ci
 
 # Recompilar TensorFlow.js native bindings
 RUN npm rebuild @tensorflow/tfjs-node --build-addon-from-source
