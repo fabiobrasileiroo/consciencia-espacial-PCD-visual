@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@theme inline {
+  /* Font family definitions */
+  --font-ibm: var(--font-ibm);
+  --font-poppins: var(--font-poppins);
+}
+
+:root {
+  --font-ibm: 'IBM Plex Sans', sans-serif;
+  --font-poppins: 'Poppins', sans-serif;
+}
+
+.dark {
+
+}
+

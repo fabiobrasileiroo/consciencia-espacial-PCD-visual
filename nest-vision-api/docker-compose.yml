@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  # Vision API Service
+  vision-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vision-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - CORS_ORIGIN=*
+      - ESP32_MAX_DETECTIONS_HISTORY=100
+      - ESP32_STREAM_KEEPALIVE_INTERVAL=30000
+    restart: unless-stopped
+    networks:
+      - vision-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.vision.service=api"
+      - "com.vision.description=Sistema de detecção de objetos para PCD visual"
+
+  # Opcional: Redis para cache (descomente se necessário)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: vision-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - vision-network
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 30s
+  #     timeout: 3s
+  #     retries: 3
+
+networks:
+  vision-network:
+    driver: bridge
+# volumes:
+#   redis-data:
