@@ -1,0 +1,44 @@
+# .dockerignore para Backend Vision
+# Evita copiar arquivos desnecessários para a imagem Docker
+
+# Node modules (serão instalados no container)
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Logs
+logs/
+*.log
+
+# Documentação (opcional - remover se quiser incluir)
+*.md
+!README.md
+
+# Testes
+test/
+*.test.js
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment (copiar manualmente se necessário)
+.env.local
+.env.*.local
+
+# Temporários
+tmp/
+temp/
+*.tmp

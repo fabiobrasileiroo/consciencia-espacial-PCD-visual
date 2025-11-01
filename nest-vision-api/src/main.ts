@@ -2,9 +2,16 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Servir arquivos estáticos
+  app.useStaticAssets(join(__dirname, '..', 'public'), {
+    prefix: '/viewer/',
+  });
 
   // Enable CORS
   app.enableCors({
@@ -65,6 +72,9 @@ async function bootstrap() {
   console.log(`  📚 Documentação Swagger: http://localhost:${port}/api/docs`);
   console.log(`  📡 Stream SSE: http://localhost:${port}/api/vision/stream`);
   console.log(`  💚 Health check: http://localhost:${port}/api/health`);
+  console.log('');
+  console.log(`  🖼️  Visualizador Web: http://localhost:${port}/viewer/viewer.html`);
+  console.log(`  📸 API Captura: http://localhost:${port}/api/vision/esp32/capture-image`);
   console.log('');
   console.log('  Aguardando conexões do ESP32-CAM...');
   console.log('');

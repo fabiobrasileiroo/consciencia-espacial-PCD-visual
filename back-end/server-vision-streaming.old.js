@@ -7,7 +7,7 @@
 
 const express = require('express');
 const { json, urlencoded } = express;
-const { WebSocketServer, WebSocket } = require('ws');
+const { WebSocketServer } = require('ws');
 const cors = require('cors');
 const cocoSsd = require('@tensorflow-models/coco-ssd');
 require('@tensorflow/tfjs-node'); // habilita backend nativo do TF
@@ -23,7 +23,6 @@ const app = express();
 
 const PORT = 3000;
 const WS_PORT = 8080;
-const ESP32_WS_PORT = 8081;  // Nova porta para receber dados do ESP32-PAI
 
 // ===== CONFIGURAÇÃO DO ESP32-CAM =====
 const ESP32_CAM_CONFIG = {
@@ -1275,114 +1274,6 @@ app.post('/api/esp32/status-update', (req, res) => {
   });
 });
 
-/**
- * @swagger
- * /api/esp32/command:
- *   post:
- *     summary: 🎮 Enviar comando remoto ao ESP32-PAI
- *     description: |
- *       Envia comandos via WebSocket para o ESP32-PAI.
- *       
- *       **Comandos disponíveis:**
- *       - `set_vibration`: Define nível de vibração manual (0-255)
- *       - `test_motor`: Testa motor com padrão (3 pulsos)
- *       - `calibrate_sensor`: Calibra sensor de distância
- *       - `reboot`: Reinicia ESP32-PAI
- *       - `get_status`: Solicita status completo
- *     tags: [ESP32]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - command
- *             properties:
- *               command:
- *                 type: string
- *                 description: Nome do comando
- *                 enum: [set_vibration, test_motor, calibrate_sensor, reboot, get_status]
- *                 example: test_motor
- *               value:
- *                 type: number
- *                 description: Valor para comando (se necessário)
- *                 example: 128
- *     responses:
- *       200:
- *         description: Comando enviado com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: Comando enviado ao ESP32-PAI
- *                 command:
- *                   type: object
- *       503:
- *         description: ESP32-PAI não conectado
- */
-app.post('/api/esp32/command', (req, res) => {
-  const { command, value } = req.body;
-
-  if (!command) {
-    return res.status(400).json({
-      success: false,
-      error: 'Campo "command" obrigatório'
-    });
-  }
-
-  // Comandos válidos
-  const validCommands = ['set_vibration', 'test_motor', 'calibrate_sensor', 'reboot', 'get_status'];
-
-  if (!validCommands.includes(command)) {
-    return res.status(400).json({
-      success: false,
-      error: `Comando inválido. Use: ${validCommands.join(', ')}`
-    });
-  }
-
-  // Criar objeto de comando
-  const commandObj = {
-    type: 'command',
-    command,
-    timestamp: Date.now()
-  };
-
-  // Adicionar valor se fornecido
-  if (value !== undefined) {
-    commandObj.value = value;
-  }
-
-  // Enviar ao ESP32
-  const sent = sendCommandToESP32(commandObj);
-
-  if (sent) {
-    res.json({
-      success: true,
-      message: 'Comando enviado ao ESP32-PAI',
-      command: commandObj
-    });
-
-    // Broadcast via SSE
-    broadcastToSSEClients('esp32-command', {
-      command,
-      value,
-      timestamp: Date.now()
-    });
-  } else {
-    res.status(503).json({
-      success: false,
-      error: 'ESP32-PAI não conectado ao WebSocket'
-    });
-  }
-});
-
 // Função auxiliar para enviar SSE
 function sendSSEUpdate(client, eventType, data) {
   try {
@@ -1401,9 +1292,6 @@ function broadcastSSE(eventType, data) {
     sendSSEUpdate(client, eventType, data);
   });
 }
-
-// Alias para compatibilidade
-const broadcastToSSEClients = broadcastSSE;
 
 // Adicionar alerta
 function addAlert(level, message) {
@@ -1996,229 +1884,9 @@ process.on('SIGINT', () => {
     client.close();
   });
 
-  // Fechar servidor WebSocket ESP32
-  if (esp32WebSocketServer) {
-    esp32WebSocketServer.clients.forEach((client) => {
-      client.close();
-    });
-    esp32WebSocketServer.close();
-    console.log('✅ WebSocket ESP32 encerrado');
-  }
-
   console.log('✅ Servidor encerrado com sucesso');
   process.exit(0);
 });
 
-// ===== WEBSOCKET PARA RECEBER DADOS DO ESP32-PAI =====
-let esp32WebSocketServer;
-let esp32PaiConnection = null;
-
-function setupESP32WebSocket() {
-  esp32WebSocketServer = new WebSocketServer({
-    port: ESP32_WS_PORT,
-    clientTracking: true
-  });
-
-  console.log(`\n🔌 WebSocket para ESP32 rodando na porta ${ESP32_WS_PORT}`);
-  console.log(`   URL: ws://localhost:${ESP32_WS_PORT}/`);
-  console.log(`   Configure o ESP32-PAI com este endereço!\n`);
-
-  esp32WebSocketServer.on('connection', (ws, req) => {
-    const clientIp = req.socket.remoteAddress;
-    console.log(`\n🤝 ESP32 conectado: ${clientIp}`);
-
-    esp32PaiConnection = ws;
-
-    // Enviar mensagem de boas-vindas
-    ws.send(JSON.stringify({
-      type: 'connected',
-      message: 'Servidor Node.js pronto!',
-      timestamp: Date.now()
-    }));
-
-    // Receber mensagens do ESP32
-    ws.on('message', (data) => {
-      try {
-        const message = JSON.parse(data.toString());
-        handleESP32Message(message);
-      } catch (err) {
-        console.error('❌ Erro ao processar mensagem ESP32:', err);
-      }
-    });
-
-    // Tratar desconexão
-    ws.on('close', () => {
-      console.log('❌ ESP32 desconectado');
-      esp32PaiConnection = null;
-
-      // Marcar todos os módulos como offline
-      updateESP32Status('pai', false);
-      updateESP32Status('sensor', false);
-      updateESP32Status('motor', false);
-      updateESP32Status('camera', false);
-    });
-
-    ws.on('error', (err) => {
-      console.error('❌ Erro WebSocket ESP32:', err);
-    });
-
-    // Enviar ping a cada 30s para manter conexão viva
-    const pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
-      } else {
-        clearInterval(pingInterval);
-      }
-    }, 30000);
-  });
-
-  esp32WebSocketServer.on('error', (err) => {
-    console.error('❌ Erro no servidor WebSocket ESP32:', err);
-  });
-}
-
-// ===== PROCESSAR MENSAGENS DO ESP32-PAI =====
-function handleESP32Message(message) {
-  console.log(`\n📥 Mensagem ESP32 (${message.type}):`, message);
-
-  switch (message.type) {
-    case 'identify':
-      // ESP32-PAI se identificando
-      console.log(`✅ ESP32-PAI identificado: ${message.deviceId}`);
-      updateESP32Status('pai', true);
-      addSystemAlert('info', `ESP32-PAI conectado: ${message.deviceId}`);
-
-      // Enviar confirmação
-      if (esp32PaiConnection && esp32PaiConnection.readyState === WebSocket.OPEN) {
-        esp32PaiConnection.send(JSON.stringify({
-          type: 'identify-ack',
-          message: 'Servidor reconheceu o PAI',
-          timestamp: Date.now()
-        }));
-      }
-      break;
-
-    case 'status':
-      // Status de um módulo (sensor, motor, camera)
-      handleModuleStatus(message);
-      break;
-
-    case 'alert':
-      // Alerta de perigo
-      handleESP32Alert(message);
-      break;
-
-    case 'heartbeat':
-      // Heartbeat do PAI
-      updateESP32Status('pai', true);
-      esp32Status.pai.lastUpdate = Date.now();
-      break;
-
-    case 'pong':
-      // Resposta ao ping
-      console.log('🏓 Pong recebido do ESP32');
-      break;
-
-    default:
-      console.log(`⚠️ Tipo de mensagem desconhecido: ${message.type}`);
-  }
-}
-
-// ===== TRATAR STATUS DE MÓDULOS =====
-function handleModuleStatus(message) {
-  const { module, distance, rssi, vibrationLevel, frameCount } = message;
-
-  if (module === 'sensor') {
-    // Atualizar status do sensor
-    updateESP32Status('sensor', true);
-    esp32Status.sensor.distance = distance;
-    esp32Status.sensor.rssi = rssi;
-    esp32Status.sensor.lastUpdate = Date.now();
-
-    console.log(`📏 Sensor: ${distance}cm | RSSI: ${rssi}dBm`);
-
-    // Broadcast via SSE
-    broadcastToSSEClients('esp32-status', {
-      module: 'sensor',
-      connected: true,
-      distance,
-      rssi,
-      timestamp: Date.now()
-    });
-  }
-  else if (module === 'motor') {
-    // Atualizar status do motor
-    updateESP32Status('motor', true);
-    esp32Status.motor.vibrationLevel = vibrationLevel;
-    esp32Status.motor.lastUpdate = Date.now();
-
-    console.log(`📳 Motor: Vibração ${vibrationLevel}%`);
-
-    // Broadcast via SSE
-    broadcastToSSEClients('esp32-status', {
-      module: 'motor',
-      connected: true,
-      vibrationLevel,
-      timestamp: Date.now()
-    });
-  }
-  else if (module === 'camera') {
-    // Atualizar status da câmera
-    updateESP32Status('camera', true);
-    esp32Status.camera.frameCount = frameCount;
-    esp32Status.camera.rssi = rssi;
-    esp32Status.camera.lastUpdate = Date.now();
-
-    console.log(`📷 Câmera: ${frameCount} frames | RSSI: ${rssi}dBm`);
-
-    // Broadcast via SSE
-    broadcastToSSEClients('esp32-status', {
-      module: 'camera',
-      connected: true,
-      frameCount,
-      rssi,
-      timestamp: Date.now()
-    });
-  }
-}
-
-// ===== TRATAR ALERTAS DO ESP32 =====
-function handleESP32Alert(message) {
-  const { level, msg, distance } = message;
-
-  console.log(`\n🚨 ALERTA ${level.toUpperCase()}: ${msg}`);
-
-  // Adicionar ao sistema de alertas
-  addSystemAlert(level, msg);
-
-  // Se for perigo, enviar notificação especial via SSE
-  if (level === 'danger') {
-    broadcastToSSEClients('alert', {
-      type: 'danger',
-      message: msg,
-      distance,
-      timestamp: Date.now()
-    });
-  }
-}
-
-// ===== ENVIAR COMANDO PARA ESP32-PAI =====
-function sendCommandToESP32(command) {
-  if (!esp32PaiConnection || esp32PaiConnection.readyState !== WebSocket.OPEN) {
-    console.log('❌ ESP32-PAI não conectado');
-    return false;
-  }
-
-  try {
-    esp32PaiConnection.send(JSON.stringify(command));
-    console.log(`📤 Comando enviado ao ESP32:`, command);
-    return true;
-  } catch (err) {
-    console.error('❌ Erro ao enviar comando:', err);
-    return false;
-  }
-}
-
-// Iniciar servidores
-setupESP32WebSocket();  // WebSocket para ESP32
-startServer();          // HTTP + SSE + WebSocket para App
+// Iniciar!
+startServer();

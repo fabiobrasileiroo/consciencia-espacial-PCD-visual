@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎯 Visualizador de Detecções - ESP32-CAM (NestJS)</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 30px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    .image-container {
+      position: relative;
+      background: #f0f0f0;
+      border-radius: 10px;
+      overflow: hidden;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #detectionImage {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .loading {
+      color: #666;
+      font-size: 1.2em;
+      text-align: center;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      flex: 1;
+      min-width: 150px;
+      padding: 15px 30px;
+      font-size: 1em;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+      color: white;
+    }
+
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(86, 171, 47, 0.4);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(235, 51, 73, 0.4);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .info-panel {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .info-item:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      font-weight: bold;
+      color: #495057;
+    }
+
+    .info-value {
+      color: #6c757d;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.9em;
+      font-weight: bold;
+    }
+
+    .status-active {
+      background: #28a745;
+      color: white;
+    }
+
+    .status-inactive {
+      background: #dc3545;
+      color: white;
+    }
+
+    .interval-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .interval-control input {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #dee2e6;
+      border-radius: 8px;
+      font-size: 1em;
+    }
+
+    .timestamp {
+      text-align: center;
+      color: #6c757d;
+      margin-top: 10px;
+      font-size: 0.9em;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .loading-pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🎯 Visualizador de Detecções de Objetos - NestJS API</h1>
+
+    <div class="card">
+      <div class="card-header">
+        📸 Imagem com Detecções em Tempo Real
+      </div>
+      <div class="card-body">
+        <div class="image-container">
+          <div id="loadingText" class="loading loading-pulse">
+            Aguardando captura...
+          </div>
+          <img id="detectionImage" style="display: none;" alt="Detecções">
+        </div>
+
+        <div class="timestamp" id="timestamp"></div>
+
+        <div class="controls">
+          <button class="btn-primary" onclick="captureOnce()">📷 Capturar Uma Vez</button>
+          <button class="btn-success" id="autoBtn" onclick="toggleAuto()">▶️ Auto Refresh</button>
+          <button class="btn-danger" onclick="stopAuto()">⏹️ Parar</button>
+        </div>
+
+        <div class="interval-control">
+          <label for="intervalInput" class="info-label">Intervalo (ms):</label>
+          <input type="number" id="intervalInput" value="2000" min="500" max="10000" step="100">
+          <button class="btn-primary" onclick="updateInterval()">Atualizar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        ℹ️ Informações
+      </div>
+      <div class="card-body">
+        <div class="info-panel">
+          <div class="info-item">
+            <span class="info-label">Status:</span>
+            <span id="status" class="status-badge status-inactive">Aguardando</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Frame:</span>
+            <span id="frameNumber" class="info-value">-</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Objetos Detectados:</span>
+            <span id="objectCount" class="info-value">-</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Descrição:</span>
+            <span id="description" class="info-value">-</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Auto Refresh:</span>
+            <span id="autoStatus" class="info-value">Desativado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api/vision/esp32/capture-image';
+    let autoRefreshInterval = null;
+    let currentInterval = 2000;
+
+    const imageElement = document.getElementById('detectionImage');
+    const loadingElement = document.getElementById('loadingText');
+    const timestampElement = document.getElementById('timestamp');
+    const statusElement = document.getElementById('status');
+    const frameNumberElement = document.getElementById('frameNumber');
+    const objectCountElement = document.getElementById('objectCount');
+    const descriptionElement = document.getElementById('description');
+    const autoStatusElement = document.getElementById('autoStatus');
+    const autoBtnElement = document.getElementById('autoBtn');
+
+    async function captureOnce() {
+      try {
+        showLoading();
+        updateStatus('Capturando...', 'status-inactive');
+
+        const timestamp = Date.now();
+        const response = await fetch(`${API_URL}?t=${timestamp}`);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Obter informações dos headers
+        const objectsDetected = response.headers.get('X-Objects-Detected') || '0';
+        const description = response.headers.get('X-Description') || 'Nenhuma descrição';
+        const frameNumber = response.headers.get('X-Frame-Number') || '-';
+
+        // Converter resposta para blob
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+
+        // Atualizar imagem
+        imageElement.src = imageUrl;
+        imageElement.style.display = 'block';
+        loadingElement.style.display = 'none';
+
+        // Atualizar informações
+        const now = new Date().toLocaleString('pt-BR');
+        timestampElement.textContent = `Última atualização: ${now}`;
+        frameNumberElement.textContent = `#${frameNumber}`;
+        objectCountElement.textContent = objectsDetected;
+        descriptionElement.textContent = description;
+        updateStatus('Ativo', 'status-active');
+
+      } catch (error) {
+        console.error('Erro ao capturar imagem:', error);
+        loadingElement.textContent = `❌ Erro: ${error.message}`;
+        loadingElement.classList.remove('loading-pulse');
+        updateStatus('Erro', 'status-inactive');
+      }
+    }
+
+    function showLoading() {
+      loadingElement.textContent = 'Capturando...';
+      loadingElement.style.display = 'block';
+      loadingElement.classList.add('loading-pulse');
+    }
+
+    function updateStatus(text, className) {
+      statusElement.textContent = text;
+      statusElement.className = `status-badge ${className}`;
+    }
+
+    function toggleAuto() {
+      if (autoRefreshInterval) {
+        stopAuto();
+      } else {
+        startAuto();
+      }
+    }
+
+    function startAuto() {
+      if (autoRefreshInterval) return;
+
+      autoRefreshInterval = setInterval(captureOnce, currentInterval);
+      autoStatusElement.textContent = `Ativado (${currentInterval}ms)`;
+      autoBtnElement.textContent = '⏸️ Pausar Auto';
+
+      // Capturar imediatamente
+      captureOnce();
+    }
+
+    function stopAuto() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+      }
+      autoStatusElement.textContent = 'Desativado';
+      autoBtnElement.textContent = '▶️ Auto Refresh';
+    }
+
+    function updateInterval() {
+      const newInterval = parseInt(document.getElementById('intervalInput').value);
+      if (newInterval >= 500 && newInterval <= 10000) {
+        currentInterval = newInterval;
+
+        // Se auto refresh está ativo, reiniciar com novo intervalo
+        if (autoRefreshInterval) {
+          stopAuto();
+          startAuto();
+        }
+
+        alert(`Intervalo atualizado para ${currentInterval}ms`);
+      } else {
+        alert('Intervalo deve estar entre 500ms e 10000ms');
+      }
+    }
+
+    // Capturar primeira imagem ao carregar
+    window.addEventListener('load', () => {
+      setTimeout(captureOnce, 1000);
+    });
+
+    // Limpar intervals ao sair
+    window.addEventListener('beforeunload', stopAuto);
+  </script>
+</body>
+
+</html>

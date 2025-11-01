@@ -1,0 +1,75 @@
+version: "3.8"
+
+services:
+  # Servidor principal com TensorFlow (server-vision-streaming.js)
+  vision-streaming:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vision-streaming
+    ports:
+      - "3000:3000" # HTTP API
+      - "8080:8080" # WebSocket
+    environment:
+      - NODE_ENV=production
+      - ESP32_CAM_IP=${ESP32_CAM_IP:-192.168.100.56}
+      - PORT=3000
+      - WS_PORT=8080
+    volumes:
+      # Mapear apenas logs e arquivos de estado (não o código)
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - vision-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "com.vision.description=Vision Streaming Server with TensorFlow"
+      - "com.vision.service=streaming"
+
+  # Servidor alternativo (server.js) - Opcional
+  vision-basic:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vision-basic
+    command: ["node", "server.js"]
+    ports:
+      - "3001:3000" # HTTP API na porta 3001
+      - "8081:8080" # WebSocket na porta 8081
+    environment:
+      - NODE_ENV=production
+      - ESP32_CAM_IP=${ESP32_CAM_IP:-192.168.100.56}
+      - PORT=3000
+      - WS_PORT=8080
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - vision-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "com.vision.description=Vision Basic Server"
+      - "com.vision.service=basic"
+    profiles:
+      - full # Só inicia se usar: docker-compose --profile full up
+
+networks:
+  vision-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  vision-logs:
+    driver: local

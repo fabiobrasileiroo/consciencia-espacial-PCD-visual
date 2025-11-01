@@ -12,6 +12,7 @@ import {
   Delete,
   Param,
   NotFoundException,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -495,6 +496,227 @@ Inclui:
     return {
       total: modules.length,
       modules,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('esp32/test')
+  @ApiOperation({
+    summary: '🔧 Testa conexão com ESP32-CAM',
+    description: 'Testa se o ESP32-CAM está acessível e respondendo.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Status da conexão com ESP32',
+  })
+  async testESP32Connection() {
+    const isConnected = await this.visionService.testESP32Connection();
+    const config = this.visionService.getESP32Config();
+
+    return {
+      status: isConnected ? 'online' : 'offline',
+      connected: isConnected,
+      config: {
+        ip: config.ip,
+        port: config.port,
+        captureUrl: `http://${config.ip}${config.captureEndpoint}`,
+        streamUrl: `http://${config.ip}:${config.port}${config.streamEndpoint}`,
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('esp32/capture-image')
+  @ApiOperation({
+    summary: '📸 Captura imagem com detecções desenhadas',
+    description: `
+Captura uma imagem do ESP32-CAM, processa com TensorFlow e retorna a imagem
+com bounding boxes desenhadas ao redor dos objetos detectados.
+
+**Resposta:** Imagem JPEG com detecções visuais
+
+**Headers personalizados:**
+- X-Objects-Detected: Número de objetos detectados
+- X-Description: Descrição em português
+- X-Frame-Number: Número do frame capturado
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Imagem JPEG com bounding boxes',
+    content: {
+      'image/jpeg': {
+        schema: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async captureImageWithDetections(@Res() res: any) {
+    try {
+      this.logger.log('📸 Capturando imagem com detecções...');
+
+      const processed = await this.visionService.captureAndProcessImage();
+
+      if (!processed) {
+        return res.status(500).json({
+          success: false,
+          error: 'Falha ao capturar frame',
+        });
+      }
+
+      const description =
+        this.visionService['tensorFlowService'].generateDescription(
+          processed.detections,
+        );
+
+      this.logger.log(
+        `✅ Detectados ${processed.detections.length} objetos`,
+      );
+
+      // Enviar imagem como resposta
+      res.set({
+        'Content-Type': 'image/jpeg',
+        'Content-Length': processed.buffer.length,
+        'X-Objects-Detected': processed.detections.length.toString(),
+        'X-Description': description,
+        'X-Frame-Number': this.visionService['frameCount'].toString(),
+      });
+
+      res.send(processed.buffer);
+      this.logger.log('✅ Imagem enviada com bounding boxes\n');
+    } catch (error) {
+      this.logger.error('❌ Erro ao capturar imagem:', error.message);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  @Get('esp32/capture')
+  @ApiOperation({
+    summary: '📸 Captura e processa frame (JSON)',
+    description: `
+Captura uma imagem do ESP32-CAM, processa com TensorFlow e retorna os dados
+das detecções em formato JSON (sem a imagem).
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Dados das detecções em JSON',
+  })
+  async captureFrame() {
+    try {
+      const processed = await this.visionService.captureAndProcessImage();
+
+      if (!processed) {
+        return {
+          success: false,
+          error: 'Falha ao capturar frame',
+        };
+      }
+
+      const description =
+        this.visionService['tensorFlowService'].generateDescription(
+          processed.detections,
+        );
+
+      return {
+        success: true,
+        description,
+        objects: processed.detections.map((d) => ({
+          class: d.class,
+          classPortuguese:
+            this.visionService['tensorFlowService'].translateToPortuguese(
+              d.class,
+            ),
+          confidence: d.score,
+          bbox: d.bbox,
+        })),
+        imageInfo: {
+          width: processed.width,
+          height: processed.height,
+        },
+        timestamp: Date.now(),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Post('esp32/auto-capture/start')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '▶️ Inicia captura automática',
+    description: 'Inicia o loop de captura e processamento automático.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Captura automática iniciada',
+  })
+  startAutoCapture() {
+    if (this.visionService.isAutoCapturing()) {
+      return {
+        success: false,
+        message: 'Captura automática já está ativa',
+      };
+    }
+
+    this.visionService.startAutomaticCapture();
+
+    return {
+      success: true,
+      message: 'Captura automática iniciada',
+      interval: parseInt(process.env.VISION_CAPTURE_INTERVAL || '2000'),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('esp32/auto-capture/stop')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '⏹️ Para captura automática',
+    description: 'Para o loop de captura automática.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Captura automática parada',
+  })
+  stopAutoCapture() {
+    if (!this.visionService.isAutoCapturing()) {
+      return {
+        success: false,
+        message: 'Captura automática não está ativa',
+      };
+    }
+
+    this.visionService.stopAutomaticCapture();
+
+    return {
+      success: true,
+      message: 'Captura automática parada',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('esp32/auto-capture/status')
+  @ApiOperation({
+    summary: '📊 Status da captura automática',
+    description: 'Verifica se a captura automática está ativa.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Status da captura automática',
+  })
+  getAutoCaptureStatus() {
+    return {
+      active: this.visionService.isAutoCapturing(),
+      interval: parseInt(process.env.VISION_CAPTURE_INTERVAL || '2000'),
       timestamp: new Date().toISOString(),
     };
   }
