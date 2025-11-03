@@ -8,7 +8,6 @@
 <img width="1463" height="1139" alt="Diagrama visual" src="https://github.com/user-attachments/assets/d0dd161d-42b6-439d-b030-470a401e6ada" />
 
 > Sistema de assistência para detecção de obstáculos usando ESP32, ESP-NOW, sensor HC-SR04 e feedback tátil.
-![Uploading iPhone 16.svg…]()
 
 ## ✨ Características
 
