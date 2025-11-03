@@ -1,10 +1,11 @@
 # 🚀 Sistema de Detecção de Objetos com ESP32
-<img width="1500" height="1125" alt="iPhone 16" src="https://github.com/user-attachments/assets/fdac1e1a-cae8-4143-9a42-3346d0985ab8" />
-<img width="1463" height="1139" alt="Diagrama visual" src="https://github.com/user-attachments/assets/d0dd161d-42b6-439d-b030-470a401e6ada" />
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![PlatformIO](https://img.shields.io/badge/PlatformIO-6.8.1-orange.svg)](https://platformio.org)
 [![ESP32](https://img.shields.io/badge/ESP32-Arduino-green.svg)](https://github.com/espressif/arduino-esp32)
+
+<img width="1500" height="1125" alt="iPhone 16" src="https://github.com/user-attachments/assets/fdac1e1a-cae8-4143-9a42-3346d0985ab8" />
+<img width="1463" height="1139" alt="Diagrama visual" src="https://github.com/user-attachments/assets/d0dd161d-42b6-439d-b030-470a401e6ada" />
 
 > Sistema de assistência para detecção de obstáculos usando ESP32, ESP-NOW, sensor HC-SR04 e feedback tátil.
 ![Uploading iPhone 16.svg…]()
