@@ -1,8 +1,11 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { styles } from './styles';
 import { useApp } from '@/contexts/AppContext';
+import useBLE from '@/services/bluetooth-service';
 import { Audio } from 'expo-av';
+import React from 'react';
+import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Device } from 'react-native-ble-plx';
+import { styles } from './styles';
+import { DeviceModal } from '../../components/deviceModal';
 
 const Logo = require('@/assets/images/logo.png');
 const Glasses = require('@/assets/images/glasses.png');
@@ -17,6 +20,31 @@ const Switch = require('@/assets/images/switch.png');
 
 export default function HomeScreen() {
   const { mode, setMode, connectionStatus, setConnectionStatus, volume } = useApp();
+  const { 
+    requestPermissions, 
+    scanForPeripherals, 
+    allDevices,
+    connectedDevice,
+    connectToDevice,
+  } = useBLE();
+  const [modalVisible, setModalVisible] = React.useState(false);
+
+  const requestForDevices = async () => {
+    const isPermissionEnabled = await requestPermissions();
+    if (isPermissionEnabled) {
+      scanForPeripherals();
+}
+  }
+
+  const openModal = () => {
+    requestForDevices()
+    setModalVisible(true);
+  }
+
+  const hideModal = () => {
+    setModalVisible(false);
+  }
+
 
   const handleTestSound = async () => {
     try {
@@ -200,17 +228,26 @@ export default function HomeScreen() {
       <View style={styles.buttonsRow}>
         <TouchableOpacity 
           style={styles.button2}
-          onPress={handleChangeMode}
+          onPress={openModal}
           accessibilityRole="button"
           accessibilityLabel={`Botão mudar modo. Modo atual: ${mode === 'som' ? 'som' : 'vibração'}`}
           accessibilityHint={`Pressione para alterar o modo. Ao pressionar será anunciado: modo alterado para ${mode === 'som' ? 'vibração' : 'som'}`}
-        >
-          <Image 
-            source={Switch} 
-            style={styles.smallIcon}
-            resizeMode="contain"
-            accessibilityLabel="Ícone de alternância"
+        > 
+          <DeviceModal
+            visible={modalVisible}
+            onClose={hideModal}
+            devices={allDevices}
+            onDevicePress={(device: Device) => {
+              connectToDevice?.(device);
+              hideModal();
+            }}
           />
+            <Image
+              source={Switch}
+              style={styles.smallIcon}
+              resizeMode="contain"
+              accessibilityLabel="Ícone de alternância"
+            />
           <Text style={styles.buttonText}>
             Modo: {mode === 'som' ? 'Som' : 'Vibração'}
           </Text>
@@ -218,7 +255,7 @@ export default function HomeScreen() {
 
         <TouchableOpacity 
           style={styles.button2}
-          onPress={handleConnectBluetooth}
+          onPress={openModal}
           accessibilityRole="button"
           accessibilityLabel={`Botão ${connectionStatus === 'conectado' ? 'desconectar' : 'conectar'} Bluetooth. Status atual: ${connectionStatus}`}
           accessibilityHint={`Pressione para ${connectionStatus === 'conectado' ? 'desconectar' : 'conectar'} o Bluetooth. Ao pressionar será anunciado: ${connectionStatus === 'conectado' ? 'desconectado' : 'conectado'}`}
@@ -233,6 +270,8 @@ export default function HomeScreen() {
             {connectionStatus === 'conectado' ? 'Desconectar' : 'Conectar'} Bluetooth
           </Text>
         </TouchableOpacity>
+        
+          
       </View>
 
       <View style={styles.card}>
