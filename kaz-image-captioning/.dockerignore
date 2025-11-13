@@ -1,0 +1,63 @@
+# Arquivo .dockerignore para otimizar o build
+
+# Ambiente virtual Python
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Modelo (será montado como volume)
+checkpoints/*.pth
+
+# Imagens capturadas
+captured_*.jpg
+result_*.jpg
+esp32_*.jpg
+*.txt
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentação (não necessária no container)
+*.md
+!README.md
+
+# Logs
+*.log
+
+# Dados temporários
+tmp/
+temp/
+*.tmp
+
+# Arquivos grandes desnecessários
+*.tar
+*.tar.gz
+*.zip
+
+# Arquivos de configuração local
+.env.local
+.env.*.local
