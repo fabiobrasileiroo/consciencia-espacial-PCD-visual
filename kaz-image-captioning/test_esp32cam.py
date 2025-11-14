@@ -18,7 +18,8 @@ from models.End_ExpansionNet_v2 import End_ExpansionNet_v2
 from utils.language_utils import convert_vector_idx2word
 from time import time
 import os
-import argparse as ap
+import argparse
+from googletrans import Translator
 
 # Configurações do modelo
 load_path = 'checkpoints/kaz_model.pth'
@@ -86,11 +87,23 @@ beam_search_kwargs = {
     'eos_idx': coco_tokens['word2idx_dict'][coco_tokens['eos_str']]
 }
 
+# Inicializar tradutor
+translator = Translator()
+
+def translate_to_portuguese(text):
+    """Traduz texto do cazaque para português"""
+    try:
+        translation = translator.translate(text, src='kk', dest='pt')
+        return translation.text
+    except Exception as e:
+        print(f"⚠️  Erro na tradução: {e}")
+        return text  # Retorna texto original se falhar
+
 def cv2_to_pil(img):
     """Converte imagem OpenCV para PIL"""
     return PIL_Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
-def generate_caption(img):
+def generate_caption(img, translate=True):
     """Gera legenda para uma imagem"""
     print("\n🤖 Gerando legenda...")
     start = time()
@@ -116,13 +129,23 @@ def generate_caption(img):
     
     pred = convert_vector_idx2word(pred[0][0], coco_tokens['idx2word_list'])[1:-1]
     pred[-1] = pred[-1] + '.'
-    pred = ' '.join(pred).capitalize()
+    pred_kaz = ' '.join(pred).capitalize()
     
     stop = time()
-    print(f'📝 Descrição: {pred}')
-    print(f'⏱️  Tempo: {stop-start:.4f}s\n')
+    print(f'📝 Descrição (Cazaque): {pred_kaz}')
+    print(f'⏱️  Tempo de geração: {stop-start:.4f}s')
     
-    return pred
+    # Traduzir para português se solicitado
+    if translate:
+        print("🌐 Traduzindo para português...")
+        trans_start = time()
+        pred_pt = translate_to_portuguese(pred_kaz)
+        trans_stop = time()
+        print(f'📝 Descrição (Português): {pred_pt}')
+        print(f'⏱️  Tempo de tradução: {trans_stop-trans_start:.4f}s\n')
+        return pred_kaz, pred_pt
+    
+    return pred_kaz, pred_kaz
 
 def main():
     """Função principal"""
@@ -214,29 +237,38 @@ def main():
                 print(f"💾 Imagem salva: {capture_filename}")
                 
                 # Gerar legenda
-                caption = generate_caption(frame)
+                caption_kaz, caption_pt = generate_caption(frame)
                 
                 # Mostrar resultado em uma janela separada
                 result_frame = frame.copy()
                 
-                # Adicionar fundo para o texto
+                # Adicionar fundo para o texto (aumentado para caber duas legendas)
                 overlay = result_frame.copy()
-                cv2.rectangle(overlay, (0, result_frame.shape[0] - 100), 
+                cv2.rectangle(overlay, (0, result_frame.shape[0] - 140), 
                             (result_frame.shape[1], result_frame.shape[0]), 
                             (0, 0, 0), -1)
                 cv2.addWeighted(overlay, 0.7, result_frame, 0.3, 0, result_frame)
                 
-                # Adicionar legenda na imagem
-                y_offset = result_frame.shape[0] - 70
-                cv2.putText(result_frame, "Caption:", 
-                          (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+                # Adicionar legendas na imagem
+                y_offset = result_frame.shape[0] - 120
                 
-                # Dividir caption em múltiplas linhas se for muito longa
-                caption_lines = [caption[i:i+40] for i in range(0, len(caption), 40)]
-                for i, line in enumerate(caption_lines[:2]):  # Mostrar no máximo 2 linhas
+                # Legenda em Português (principal)
+                cv2.putText(result_frame, "PT:", 
+                          (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                caption_pt_lines = [caption_pt[i:i+35] for i in range(0, len(caption_pt), 35)]
+                for i, line in enumerate(caption_pt_lines[:2]):
                     cv2.putText(result_frame, line, 
-                              (10, y_offset + 35 + i*25), cv2.FONT_HERSHEY_SIMPLEX, 
-                              0.6, (255, 255, 255), 2)
+                              (50, y_offset + i*25), cv2.FONT_HERSHEY_SIMPLEX, 
+                              0.55, (255, 255, 255), 2)
+                
+                # Legenda em Cazaque (secundária)
+                y_offset_kaz = result_frame.shape[0] - 50
+                cv2.putText(result_frame, "KZ:", 
+                          (10, y_offset_kaz), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (150, 150, 150), 1)
+                caption_kaz_short = caption_kaz[:45] + "..." if len(caption_kaz) > 45 else caption_kaz
+                cv2.putText(result_frame, caption_kaz_short, 
+                          (50, y_offset_kaz), cv2.FONT_HERSHEY_SIMPLEX, 
+                          0.45, (200, 200, 200), 1)
                 
                 cv2.imshow(f"Resultado #{capture_count}", result_frame)
                 
@@ -245,11 +277,12 @@ def main():
                 cv2.imwrite(result_filename, result_frame)
                 print(f"💾 Resultado salvo: {result_filename}")
                 
-                # Salvar legenda em arquivo
+                # Salvar legendas em arquivo
                 caption_filename = os.path.join(results_dir, f'esp32_caption_{capture_count}.txt')
                 with open(caption_filename, 'w', encoding='utf-8') as f:
-                    f.write(f"{caption}\n")
-                print(f"📝 Legenda salva: {caption_filename}")
+                    f.write(f"Português: {caption_pt}\n")
+                    f.write(f"Cazaque: {caption_kaz}\n")
+                print(f"📝 Legendas salvas: {caption_filename}")
                 
     except KeyboardInterrupt:
         print("\n⚠️  Interrompido pelo usuário")
