@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include "esp_camera.h"
 #include <WiFi.h>
-#include <esp_now.h>
-#include <esp_wifi.h>
 
 // ===========================
 // Select camera model in board_config.h
@@ -14,53 +12,6 @@
 // ===========================
 const char *ssid = "FJ";
 const char *password = "#f39A@jl32*1";
-
-// ===========================
-// ESP-NOW Configuration
-// ===========================
-// SUBSTITUA PELO MAC ADDRESS DO SEU ESP32-PAI
-uint8_t paiMacAddress[] = {0xEC, 0x64, 0xC9, 0x7C, 0x38, 0x30};
-
-// Estrutura de dados para enviar ao PAI
-typedef struct struct_camera_status {
-  int moduleId;           // 2 = camera
-  bool capturing;         // Se está capturando frames
-  int frameCount;         // Quantidade de frames capturados
-  long rssi;              // Sinal WiFi
-  unsigned long uptime;   // Tempo ligado (ms)
-} struct_camera_status;
-
-struct_camera_status cameraStatus;
-unsigned long lastHeartbeat = 0;
-const unsigned long HEARTBEAT_INTERVAL = 3000;  // Enviar status a cada 3s
-
-// ===========================
-// ESP-NOW Callbacks
-// ===========================
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  if (status == ESP_NOW_SEND_SUCCESS) {
-    Serial.println("📤 Heartbeat enviado ao PAI com sucesso");
-  } else {
-    Serial.println("❌ Falha ao enviar heartbeat ao PAI");
-  }
-}
-
-void sendHeartbeatToPAI() {
-  cameraStatus.moduleId = 2;  // ID da câmera
-  cameraStatus.capturing = true;
-  cameraStatus.frameCount++;
-  cameraStatus.rssi = WiFi.RSSI();
-  cameraStatus.uptime = millis();
-  
-  esp_err_t result = esp_now_send(paiMacAddress, (uint8_t*)&cameraStatus, sizeof(cameraStatus));
-  
-  if (result == ESP_OK) {
-    Serial.printf("💓 Heartbeat enviado - Frames: %d, RSSI: %ld dBm\n", 
-                  cameraStatus.frameCount, cameraStatus.rssi);
-  } else {
-    Serial.printf("❌ Erro ESP-NOW: %d\n", result);
-  }
-}
 
 void startCameraServer();
 void setupLedFlash();
@@ -167,57 +118,14 @@ void setup() {
   Serial.println("");
   Serial.println("WiFi connected");
 
-  // ===========================
-  // Inicializar ESP-NOW
-  // ===========================
-  // Mudar para modo AP_STA (AP para servidor HTTP + STA para ESP-NOW)
-  WiFi.mode(WIFI_AP_STA);
-  
-  if (esp_now_init() == ESP_OK) {
-    Serial.println("✅ ESP-NOW inicializado com sucesso");
-    
-    // Registrar callback de envio
-    esp_now_register_send_cb(OnDataSent);
-    
-    // Adicionar ESP32-PAI como peer
-    esp_now_peer_info_t peerInfo = {};
-    memcpy(peerInfo.peer_addr, paiMacAddress, 6);
-    peerInfo.channel = 0;
-    peerInfo.encrypt = false;
-    
-    if (esp_now_add_peer(&peerInfo) == ESP_OK) {
-      Serial.println("✅ ESP32-PAI adicionado como peer");
-      Serial.printf("   MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
-                    paiMacAddress[0], paiMacAddress[1], paiMacAddress[2],
-                    paiMacAddress[3], paiMacAddress[4], paiMacAddress[5]);
-    } else {
-      Serial.println("❌ Erro ao adicionar PAI como peer");
-    }
-  } else {
-    Serial.println("❌ Erro ao inicializar ESP-NOW");
-  }
-  
-  // Inicializar estrutura de status
-  cameraStatus.moduleId = 2;
-  cameraStatus.capturing = false;
-  cameraStatus.frameCount = 0;
-  cameraStatus.rssi = WiFi.RSSI();
-  cameraStatus.uptime = 0;
-
   startCameraServer();
 
   Serial.print("Camera Ready! Use 'http://");
   Serial.print(WiFi.localIP());
   Serial.println("' to connect");
-  Serial.println("📡 ESP-NOW: Enviando heartbeat a cada 3 segundos");
 }
 
 void loop() {
-  // Enviar heartbeat periódico via ESP-NOW
-  if (millis() - lastHeartbeat >= HEARTBEAT_INTERVAL) {
-    sendHeartbeatToPAI();
-    lastHeartbeat = millis();
-  }
-  
-  delay(100);
+  // Loop vazio - servidor HTTP roda em background
+  delay(10000);
 }

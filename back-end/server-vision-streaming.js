@@ -1984,32 +1984,64 @@ async function startServer() {
     await loadModel();
 
     // 2. Iniciar servidor HTTP
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
+      // Obter IP local da máquina
+      const os = require('os');
+      const networkInterfaces = os.networkInterfaces();
+      let localIP = 'localhost';
+
+      // Procurar primeiro IP IPv4 válido (não loopback)
+      for (const interfaceName in networkInterfaces) {
+        const iface = networkInterfaces[interfaceName];
+        for (const alias of iface) {
+          if (alias.family === 'IPv4' && !alias.internal) {
+            localIP = alias.address;
+            break;
+          }
+        }
+        if (localIP !== 'localhost') break;
+      }
+
       console.log('\n╔══════════════════════════════════════════╗');
       console.log('║  👁️  SERVIDOR DE VISÃO COM ESP32-CAM   ║');
       console.log('╚══════════════════════════════════════════╝\n');
       console.log(`🌐 HTTP Server: http://localhost:${PORT}`);
-      console.log(`🔌 WebSocket: ws://localhost:${WS_PORT}`);
+      console.log(`🔌 WebSocket App: ws://localhost:${PORT}/ws`);
+      console.log(`🔌 WebSocket ESP32: ws://localhost:${PORT}/esp32`);
       console.log(`📡 ESP32-CAM IP: ${ESP32_CAM_CONFIG.ip}`);
       console.log(`📍 Endpoint ESP32: /${ESP32_CAM_CONFIG.endpoint} ${ESP32_CAM_CONFIG.endpoint === 'stream' ? '📹' : '📸'}`);
       console.log(`🎬 Modo: ${ESP32_CAM_CONFIG.useStreaming ? '📹 STREAMING' : '📸 CAPTURA'}`);
       console.log(`⏱️  Intervalo: ${ESP32_CAM_CONFIG.captureInterval}ms`);
       console.log(`🎯 Confiança mínima: ${(ESP32_CAM_CONFIG.minConfidence * 100).toFixed(0)}%`);
-      console.log('\n📋 Endpoints disponíveis:');
+
+      console.log('\n╔═══════════════════════════════════════════════════════════╗');
+      console.log('║  � CONFIGURAÇÃO DO ESP32-PAI (copie no main.cpp)         ║');
+      console.log('╠═══════════════════════════════════════════════════════════╣');
+      console.log(`║  const char* wsServer = "${localIP}";`);
+      console.log(`║  const int wsPort = ${PORT};`);
+      console.log(`║  const char* wsPath = "/esp32";`);
+      console.log(`║  const bool useSSL = false;`);
+      console.log('╚═══════════════════════════════════════════════════════════╝');
+
+      console.log('\n�📋 Endpoints disponíveis:');
       console.log(`   GET    http://localhost:${PORT}/api/esp32/test`);
       console.log(`   GET    http://localhost:${PORT}/api/esp32/capture`);
       console.log(`   GET    http://localhost:${PORT}/api/esp32/capture-image ✨`);
       console.log(`   GET    http://localhost:${PORT}/api/esp32/stream`);
       console.log(`   POST   http://localhost:${PORT}/api/esp32/config`);
       console.log(`   GET    http://localhost:${PORT}/api/status`);
-      console.log('\n� Documentação Swagger:');
+      console.log(`   GET    http://localhost:${PORT}/api/stream/events (SSE)`);
+      console.log('\n📚 Documentação Swagger:');
       console.log(`   👉 http://localhost:${PORT}/api/docs`);
-      console.log('\n�🖼️  Visualizador Web:');
+      console.log('\n🖼️  Visualizador Web:');
       console.log(`   👉 http://localhost:${PORT}/viewer`);
       console.log('\n📸 API de Imagem com Detecções:');
       console.log(`   http://localhost:${PORT}/api/esp32/capture-image`);
       console.log('\n✅ Servidor pronto!\n');
     });
+
+    // Configurar WebSockets após servidor HTTP iniciar
+    setupWebSockets(server);
 
     // 3. Aguardar 2 segundos e iniciar processamento
     setTimeout(() => {

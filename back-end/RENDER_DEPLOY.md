@@ -3,26 +3,31 @@
 ## ✅ Mudanças Aplicadas
 
 ### 1. **Porta Dinâmica (Render-Ready)**
+
 - ✅ `PORT` agora usa `process.env.PORT || 3000`
 - ✅ Funciona tanto localmente quanto no Render
 
 ### 2. **Swagger com BASE_URL Dinâmica**
+
 - ✅ `BASE_URL` configurável via variável de ambiente
 - ✅ Swagger UI mostrará a URL correta em produção
 - ✅ Evita mixed-content (HTTP/HTTPS) em produção
 
 ### 3. **WebSockets Unificados (Compatível com Render)**
+
 - ✅ WebSocket para App Mobile: `ws://seu-host:PORT/ws`
 - ✅ WebSocket para ESP32-PAI: `ws://seu-host:PORT/esp32`
 - ✅ Ambos rodam no mesmo servidor HTTP (mesma porta)
 - ✅ Render expõe apenas 1 porta - agora funciona!
 
 ### 4. **Docker Build Corrigido**
+
 - ✅ Dockerfile usa `npm ci` se `package-lock.json` existir
 - ✅ Fallback para `npm install` se não houver lock file
 - ✅ `.dockerignore` atualizado para garantir que lockfiles sejam copiados
 
 ### 5. **Handler SIGINT Corrigido**
+
 - ✅ Graceful shutdown sem erros ao pressionar Ctrl+C
 
 ---
@@ -67,20 +72,21 @@ curl http://localhost:3000/api/docs.json
 ## ☁️ Deploy no Render
 
 ### 1. **Criar Novo Web Service**
+
 - Vá em https://dashboard.render.com/
 - Clique em "New +" → "Web Service"
 - Conecte seu repositório GitHub
 
 ### 2. **Configurações do Serviço**
 
-| Campo | Valor |
-|-------|-------|
-| **Name** | `vision-backend` (ou seu nome) |
-| **Environment** | `Docker` |
-| **Region** | `Oregon (US West)` ou mais próximo |
-| **Branch** | `main` |
-| **Dockerfile Path** | `back-end/Dockerfile` |
-| **Docker Context** | `back-end` |
+| Campo               | Valor                              |
+| ------------------- | ---------------------------------- |
+| **Name**            | `vision-backend` (ou seu nome)     |
+| **Environment**     | `Docker`                           |
+| **Region**          | `Oregon (US West)` ou mais próximo |
+| **Branch**          | `main`                             |
+| **Dockerfile Path** | `back-end/Dockerfile`              |
+| **Docker Context**  | `back-end`                         |
 
 ### 3. **Variáveis de Ambiente**
 
@@ -98,6 +104,7 @@ BASE_URL=https://seu-servico.onrender.com
 **IMPORTANTE:** A variável `PORT` é definida automaticamente pelo Render - **NÃO adicione manualmente!**
 
 ### 4. **Build & Deploy**
+
 - Clique em "Create Web Service"
 - Render fará o build automaticamente (pode levar 5-10 minutos)
 - Aguarde o build de `@tensorflow/tfjs-node` (mais demorado)
@@ -124,13 +131,13 @@ No seu app React Native, use:
 
 ```javascript
 // HTTP API
-const API_URL = 'https://seu-servico.onrender.com';
+const API_URL = "https://seu-servico.onrender.com";
 
 // WebSocket
-const WS_URL = 'wss://seu-servico.onrender.com/ws';
+const WS_URL = "wss://seu-servico.onrender.com/ws";
 
 // SSE (Server-Sent Events)
-const SSE_URL = 'https://seu-servico.onrender.com/api/stream/events';
+const SSE_URL = "https://seu-servico.onrender.com/api/stream/events";
 ```
 
 ---
@@ -197,6 +204,7 @@ SSE Stream:  https://seu-app.onrender.com/api/stream/* ← FUNCIONA! ✅
 ## 🐛 Troubleshooting
 
 ### Build falha com "Cannot find package-lock.json"
+
 ```bash
 # Regenerar lockfile localmente
 cd back-end
@@ -208,14 +216,17 @@ git push
 ```
 
 ### WebSocket não conecta
+
 - Verifique se está usando `wss://` (não `ws://`)
 - Confirme que o path está correto: `/ws` ou `/esp32`
 
 ### Swagger mostra URLs erradas
+
 - Configure `BASE_URL` nas variáveis de ambiente do Render
 - Ou deixe vazio - o Swagger usará a origem atual
 
 ### ESP32 não conecta
+
 - Render está na internet pública - ESP32 precisa de internet
 - Use `wss://` com SSL/TLS (porta 443)
 - Considere usar ngrok/cloudflare tunnel para desenvolvimento local
@@ -225,6 +236,7 @@ git push
 ## 📊 Monitoramento
 
 No dashboard do Render:
+
 - **Logs:** Ver output em tempo real
 - **Metrics:** CPU, RAM, requests/s
 - **Events:** Deploy history
