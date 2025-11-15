@@ -1,0 +1,23 @@
+/checkpoints/*
+!/checkpoints/.gitkeep
+eval/spice/lib/stanford-corenlp-3.6.0.jar
+eval/spice/lib/stanford-corenlp-3.6.0-models.jar
+.idea/*
+**/__pycache__/*
+**/tmp/*
+!/eval/spice/tmp/.gitkeep
+**/cache/*
+!/eval/spice/cache/.gitkeep
+.ipynb_checkpoints
+
+# Ignorar ambiente virtual Python
+venv/
+.venv/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Ignorar resultados gerados, mas manter a pasta e o README
+/results/*
+!/results/README.md
+!/results/.gitkeep

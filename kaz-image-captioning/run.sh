@@ -1,0 +1,1 @@
+bash -c "cd /home/fabiobrasileiro/estudos/consciencia-espacial-PCD-visual/kaz-image-captioning && source venv/bin/activate && python3 test_esp32cam.py --url http://10.51.56.139:81/stream"

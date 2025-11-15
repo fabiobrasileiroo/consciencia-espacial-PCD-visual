@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+  # Serviço para webcam com legendas em Kazakh
+  webcam:
+    build: .
+    image: image-captioning:latest
+    container_name: image-captioning-webcam
+    command: python3 test_webcam.py
+    volumes:
+      - ./checkpoints:/app/checkpoints:ro
+      - ./captured_images:/app/captured_images
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev/video0:/dev/video0
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    network_mode: host
+    privileged: true
+    stdin_open: true
+    tty: true
+
+  # Serviço para webcam com tradução automática (Kazakh + English)
+  webcam-translate:
+    build: .
+    image: image-captioning:latest
+    container_name: image-captioning-translate
+    command: python3 test_webcam_translated.py
+    volumes:
+      - ./checkpoints:/app/checkpoints:ro
+      - ./captured_images:/app/captured_images
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev/video0:/dev/video0
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    network_mode: host
+    privileged: true
+    stdin_open: true
+    tty: true
+
+  # Serviço para processar imagem única
+  single-image:
+    build: .
+    image: image-captioning:latest
+    container_name: image-captioning-single
+    command: python3 test_single_image.py /app/input/image.jpg
+    volumes:
+      - ./checkpoints:/app/checkpoints:ro
+      - ./examples:/app/input:ro
+      - ./output:/app/output
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  # Serviço de verificação (setup check)
+  check:
+    build: .
+    image: image-captioning:latest
+    container_name: image-captioning-check
+    command: python3 setup_check.py
+    volumes:
+      - ./checkpoints:/app/checkpoints:ro
+
+# Volume para o modelo (opcional)
+volumes:
+  model_data:
+    driver: local

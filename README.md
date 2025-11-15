@@ -6,7 +6,14 @@
 [![Node.js](https://img.shields.io/badge/Node.js-22-success.svg)](https://nodejs.org)
 [![TensorFlow.js](https://img.shields.io/badge/TensorFlow.js-COCO--SSD-ff6f00.svg)](https://www.tensorflow.org/js)
 
+<<<<<<< HEAD
 > Sistema completo de assistência para pessoas com deficiência visual usando ESP32, visão computacional com TensorFlow.js, feedback tátil e narração de objetos em tempo real.
+=======
+<img width="1500" height="1125" alt="iPhone 16" src="https://github.com/user-attachments/assets/fdac1e1a-cae8-4143-9a42-3346d0985ab8" />
+<img width="1463" height="1139" alt="Diagrama visual" src="https://github.com/user-attachments/assets/d0dd161d-42b6-439d-b030-470a401e6ada" />
+
+> Sistema de assistência para detecção de obstáculos usando ESP32, ESP-NOW, sensor HC-SR04 e feedback tátil.
+>>>>>>> a2e0a3bac851cb5ad11e84c6561c5a959c219814
 
 ## ✨ Características
 
