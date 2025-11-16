@@ -338,7 +338,7 @@ export default function SettingsScreen() {
                     <Text style={[styles.subText, { fontSize: 11, flex: 1 }]}>
                       📍 Distância: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.distance}cm</Text>
                     </Text>
-                    <View style={{ 
+                    <View style={{
                       backgroundColor: esp32Status.sensor.level === 'danger' ? '#EF4444' : esp32Status.sensor.level === 'warning' ? '#F59E0B' : '#22C55E',
                       paddingHorizontal: 8,
                       paddingVertical: 2,
@@ -352,7 +352,7 @@ export default function SettingsScreen() {
                 )}
                 {typeof esp32Status.sensor.temperature === 'number' && (
                   <Text style={[styles.subText, { fontSize: 11, marginBottom: 4 }]}>
-                    🌡️ Temperatura: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.temperature.toFixed(1)}°C</Text> | 
+                    🌡️ Temperatura: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.temperature.toFixed(1)}°C</Text> |
                     💧 Umidade: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.humidity?.toFixed(1)}%</Text>
                   </Text>
                 )}
@@ -508,11 +508,11 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>
             💚 Saúde dos Sistemas
           </Text>
-          
+
           <View style={{ marginTop: 12 }}>
-            <View style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
               justifyContent: 'space-between',
               backgroundColor: systemsHealth.pai ? '#22C55E15' : '#EF444415',
               padding: 12,
@@ -525,7 +525,7 @@ export default function SettingsScreen() {
                 <Text style={{ fontSize: 18, marginRight: 10 }}>🎛️</Text>
                 <Text style={[styles.subText, { fontWeight: '600' }]}>PAI (Controlador)</Text>
               </View>
-              <View style={{ 
+              <View style={{
                 backgroundColor: systemsHealth.pai ? '#22C55E' : '#EF4444',
                 paddingHorizontal: 12,
                 paddingVertical: 6,
@@ -542,9 +542,9 @@ export default function SettingsScreen() {
               </View>
             </View>
 
-            <View style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
               justifyContent: 'space-between',
               backgroundColor: systemsHealth.sensor ? '#22C55E15' : '#EF444415',
               padding: 12,
@@ -557,7 +557,7 @@ export default function SettingsScreen() {
                 <Text style={{ fontSize: 18, marginRight: 10 }}>📏</Text>
                 <Text style={[styles.subText, { fontWeight: '600' }]}>Sensor (Distância)</Text>
               </View>
-              <View style={{ 
+              <View style={{
                 backgroundColor: systemsHealth.sensor ? '#22C55E' : '#EF4444',
                 paddingHorizontal: 12,
                 paddingVertical: 6,
@@ -574,9 +574,9 @@ export default function SettingsScreen() {
               </View>
             </View>
 
-            <View style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
               justifyContent: 'space-between',
               backgroundColor: systemsHealth.vibracall ? '#22C55E15' : '#EF444415',
               padding: 12,
@@ -589,7 +589,7 @@ export default function SettingsScreen() {
                 <Text style={{ fontSize: 18, marginRight: 10 }}>📳</Text>
                 <Text style={[styles.subText, { fontWeight: '600' }]}>Vibracall (Motor)</Text>
               </View>
-              <View style={{ 
+              <View style={{
                 backgroundColor: systemsHealth.vibracall ? '#22C55E' : '#EF4444',
                 paddingHorizontal: 12,
                 paddingVertical: 6,
@@ -606,9 +606,9 @@ export default function SettingsScreen() {
               </View>
             </View>
 
-            <View style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
               justifyContent: 'space-between',
               backgroundColor: systemsHealth.camera ? '#22C55E15' : '#EF444415',
               padding: 12,
@@ -620,7 +620,7 @@ export default function SettingsScreen() {
                 <Text style={{ fontSize: 18, marginRight: 10 }}>📷</Text>
                 <Text style={[styles.subText, { fontWeight: '600' }]}>Câmera (Visão)</Text>
               </View>
-              <View style={{ 
+              <View style={{
                 backgroundColor: systemsHealth.camera ? '#22C55E' : '#EF4444',
                 paddingHorizontal: 12,
                 paddingVertical: 6,
