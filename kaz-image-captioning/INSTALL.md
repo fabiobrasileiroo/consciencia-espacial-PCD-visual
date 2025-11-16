@@ -47,7 +47,7 @@ source venv/bin/activate && pip install --upgrade pip
 source venv/bin/activate && pip install torch torchvision opencv-python h5py scipy
 ```
 
-``` bash
+```bash
 source venv/bin/activate
 pip install googletrans==4.0.0rc1
 ```
@@ -118,13 +118,33 @@ source venv/bin/activate && python3 test_webcam_translated.py
 
 ---
 
-### Teste 3: Imagem Única
+### Teste 4: ESP32-CAM Simples (sem modelo)
 
 ```bash
-source venv/bin/activate && python3 test_single_image.py caminho/para/imagem.jpg
+source venv/bin/activate && python3 test_esp32cam_simple.py --url http://SEU_IP_ESP32:81/stream
 ```
 
-Processa uma única imagem.
+- **Apenas captura imagens** (sem IA)
+- Mais rápido e leve
+- Ideal para testar conectividade
+- Pressione **'c'** para capturar
+- Pressione **'ESC'** para sair
+
+---
+
+### Teste 5: ESP32-CAM com IA (com ou sem modelo) ⭐
+
+```bash
+source venv/bin/activate && python3 test_esp32cam.py --url http://SEU_IP_ESP32:81/stream
+```
+
+- Funciona **com ou sem** o modelo baixado
+- **Com modelo**: Gera legendas em português e cazaque
+- **Sem modelo**: Apenas captura e salva imagens
+- Pressione **'c'** para capturar
+- Pressione **'ESC'** para sair
+
+**Este é o mais recomendado para testar com ESP32!**
 
 ---
 
@@ -166,6 +186,8 @@ kaz-image-captioning/
 ├── venv/                          # Ambiente virtual
 ├── test_webcam.py                 # Teste webcam (Kazakh)
 ├── test_webcam_translated.py      # Teste webcam (KZ + EN) ⭐
+├── test_esp32cam_simple.py        # Teste ESP32 simples (sem IA)
+├── test_esp32cam.py               # Teste ESP32 com IA (opcional)
 ├── test_single_image.py           # Teste imagem única
 ├── setup_check.py                 # Verificação
 ├── Dockerfile                     # Docker config
@@ -186,6 +208,12 @@ source venv/bin/activate
 ### Depois execute o script desejado:
 
 ```bash
+# ESP32 simples (recomendado para começar)
+python3 test_esp32cam_simple.py --url http://SEU_IP_ESP32:81/stream
+
+# ESP32 com IA (se tiver o modelo)
+python3 test_esp32cam.py --url http://SEU_IP_ESP32:81/stream
+
 # Webcam com tradução (recomendado)
 python3 test_webcam_translated.py
 
@@ -210,7 +238,14 @@ source venv/bin/activate
 
 ### Erro: "Checkpoint não encontrado"
 
-**Solução:** Baixe o modelo
+**Solução 1 (Recomendada):** O script agora funciona sem o modelo!
+
+```bash
+# Funciona mesmo sem baixar o modelo
+python3 test_esp32cam.py --url http://SEU_IP_ESP32:81/stream
+```
+
+**Solução 2:** Baixar o modelo completo
 
 ```bash
 # Verificar se existe
@@ -218,6 +253,7 @@ ls checkpoints/kaz_model.pth
 
 # Se não existir, baixe do Google Drive
 # Link: https://drive.google.com/drive/folders/16PDZvoNs3P-O9Vr3zEb6bb-aaSDOiSY0
+# Arquivo: kaz_model.pth (~2.7GB)
 ```
 
 ### Erro: "Webcam não abre"
@@ -269,6 +305,8 @@ deactivate
 ⚠️ **O modelo foi treinado em Kazakh**, não em inglês/português
 
 ✅ Use `test_webcam_translated.py` para ter traduções automáticas em inglês
+
+✅ **O script `test_esp32cam.py` funciona com ou sem o modelo!**
 
 ✅ GPU é **altamente recomendada** (5-10x mais rápido)
 
