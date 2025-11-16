@@ -4,12 +4,12 @@ import { styles } from '../../styles/styles';
 import { useApp } from '@/contexts/AppContext';
 import { BluetoothService, BluetoothDevice } from '@/services/bluetooth-service';
 import { SkeletonCard } from '@/components/skeleton-loader';
-import { 
-  Globe, 
-  Plug, 
-  Ruler, 
-  Vibrate, 
-  Camera, 
+import {
+  Globe,
+  Plug,
+  Ruler,
+  Vibrate,
+  Camera,
   Smartphone,
   Settings as SettingsIcon,
   Thermometer,

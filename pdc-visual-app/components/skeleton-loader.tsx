@@ -8,11 +8,11 @@ interface SkeletonLoaderProps {
   style?: any;
 }
 
-export function SkeletonLoader({ 
-  width = '100%', 
-  height = 20, 
+export function SkeletonLoader({
+  width = '100%',
+  height = 20,
   borderRadius = 8,
-  style 
+  style
 }: SkeletonLoaderProps) {
   const opacity = useRef(new Animated.Value(0.3)).current;
 
