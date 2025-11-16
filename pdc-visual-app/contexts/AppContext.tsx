@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { ttsService, hapticsService } from '@/services/service-provider';
+import { StorageService } from '@/services/storage-service';
+
+const storageService = new StorageService();
+const API_URL_STORAGE_KEY = '@lucoi:api_url';
 
 interface DetectionHistory {
   id: string;
@@ -81,6 +85,11 @@ interface AppContextType {
   connectedDevices: ConnectedDevicesSummary;
   esp32Status: ESP32StatusMap | null;
   systemsHealth: SystemsHealth | null;
+  detectedObjectDistance: number | null; // Distância do objeto detectado
+
+  // API URL customizada
+  apiUrl: string;
+  setApiUrl: (url: string) => Promise<void>;
 
   // Toast
   toast: ToastConfig;
@@ -113,11 +122,42 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   });
   const [esp32Status, setEsp32Status] = useState<ESP32StatusMap | null>(null);
   const [systemsHealth, setSystemsHealth] = useState<SystemsHealth | null>(null);
+  const [detectedObjectDistance, setDetectedObjectDistance] = useState<number | null>(null);
+  const [apiUrl, setApiUrlState] = useState<string>(process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000');
   const [toast, setToast] = useState<ToastConfig>({
     visible: false,
     message: '',
     type: 'info',
   });
+
+  // Carregar URL customizada do AsyncStorage ao iniciar
+  useEffect(() => {
+    async function loadCustomApiUrl() {
+      try {
+        const savedUrl = await storageService.get(API_URL_STORAGE_KEY);
+        if (savedUrl) {
+          setApiUrlState(savedUrl);
+          console.log('URL da API carregada do storage:', savedUrl);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar URL customizada:', error);
+      }
+    }
+    loadCustomApiUrl();
+  }, []);
+
+  // Função para salvar URL customizada
+  const setApiUrl = async (url: string) => {
+    try {
+      await storageService.set(API_URL_STORAGE_KEY, url);
+      setApiUrlState(url);
+      console.log('URL da API salva:', url);
+      showToast('URL da API salva com sucesso!', 'success');
+    } catch (error) {
+      console.error('Erro ao salvar URL:', error);
+      showToast('Erro ao salvar URL da API', 'error');
+    }
+  };
 
   // Controle de volume do sistema
   const setSystemVolume = async (newVolume: number) => {
@@ -179,11 +219,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   // Buscar status HTTP periodicamente para uptime e dispositivos conectados
   useEffect(() => {
-    const baseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-
     async function fetchStatus() {
       try {
-        const res = await fetch(`${baseUrl}/api/status`);
+        const res = await fetch(`${apiUrl}/api/status`);
         if (!res.ok) throw new Error('Status HTTP não OK');
         const json = await res.json();
 
@@ -218,6 +256,17 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         if (json.systemsHealth) {
           setSystemsHealth(json.systemsHealth);
         }
+
+        // Capturar distância do objeto detectado mais recente (via HTTP)
+        // NOTA: Os dados do sensor (distância, temperatura, umidade) também vêm via WebSocket
+        // através de mensagens 'sensor-update', processadas no useEffect abaixo.
+        // Este HTTP polling captura o histórico de detecções armazenado no servidor.
+        if (json.lastDetections && Array.isArray(json.lastDetections) && json.lastDetections.length > 0) {
+          const mostRecent = json.lastDetections[0];
+          if (typeof mostRecent.distance === 'number') {
+            setDetectedObjectDistance(mostRecent.distance);
+          }
+        }
       } catch (error) {
         console.error('Erro ao buscar /api/status:', error);
         setServerOnline(false);
@@ -227,7 +276,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     fetchStatus();
     const interval = setInterval(fetchStatus, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [apiUrl]);
 
   // Atualizar histórico quando receber nova detecção
   useEffect(() => {
@@ -269,6 +318,11 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         setDetectionHistory(prev => [newItem, ...prev].slice(0, 50));
         setCurrentTranscription(newItem.text);
 
+        // Capturar distância do objeto detectado via WebSocket (tempo real)
+        if (typeof data.distance === 'number') {
+          setDetectedObjectDistance(data.distance);
+        }
+
         // Falar a descrição
         ttsService.speak(newItem.text).catch(err => {
           console.error('Erro no TTS:', err);
@@ -284,14 +338,20 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       }
 
       // Atualização de sensor -> pode influenciar stats / avisos
+      // NOTA: Os dados do sensor (distância, temperatura) vêm via WebSocket em tempo real
       if (type === 'sensor-update' && data) {
-        const { alertLevel, temperature } = data;
+        const { alertLevel, temperature, distance } = data;
 
         setStats(prev => ({
           temperature: typeof temperature === 'number' ? temperature : prev.temperature,
           warnings: alertLevel === 'warning' || alertLevel === 'danger' ? prev.warnings + 1 : prev.warnings,
           usageTime: prev.usageTime,
         }));
+
+        // Atualizar distância do objeto em tempo real via WebSocket
+        if (typeof distance === 'number') {
+          setDetectedObjectDistance(distance);
+        }
 
         if (alertLevel === 'danger') {
           hapticsService.vibratePattern([200, 100, 200, 100, 300]).catch(err => {
@@ -348,6 +408,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     connectedDevices,
     esp32Status,
     systemsHealth,
+    detectedObjectDistance,
+    apiUrl,
+    setApiUrl,
   };
 
   return (

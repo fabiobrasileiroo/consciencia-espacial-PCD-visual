@@ -35,6 +35,7 @@ export default function HomeScreen() {
     stats,
     serverOnline,
     connectedDevices,
+    detectedObjectDistance,
     toast,
     showToast,
     hideToast,
@@ -352,6 +353,21 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Distância do objeto detectado */}
+        {detectedObjectDistance !== null && (
+          <View style={{ marginTop: 16, padding: 12, backgroundColor: '#334155', borderRadius: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 24, marginRight: 8 }}>📏</Text>
+              <Text style={[styles.subText, { fontSize: 14, fontWeight: '600' }]}>
+                Objeto à frente:
+              </Text>
+              <Text style={[styles.subText, { fontSize: 16, fontWeight: 'bold', marginLeft: 8, color: '#22C55E' }]}>
+                {detectedObjectDistance}cm
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
 
       <TouchableOpacity

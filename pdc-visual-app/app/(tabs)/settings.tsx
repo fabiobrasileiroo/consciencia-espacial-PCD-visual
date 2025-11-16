@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
 import { styles } from './styles';
 import { useApp } from '@/contexts/AppContext';
 import { BluetoothService, BluetoothDevice } from '@/services/bluetooth-service';
@@ -23,11 +23,36 @@ export default function SettingsScreen() {
     connectedDevices,
     esp32Status,
     systemsHealth,
+    apiUrl,
+    setApiUrl,
   } = useApp();
   const [bluetoothDevices, setBluetoothDevices] = useState<BluetoothDevice[]>([]);
   const [scanning, setScanning] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [bluetoothService] = useState(() => new BluetoothService());
+  const [customUrl, setCustomUrl] = useState(apiUrl);
+  const [isEditingUrl, setIsEditingUrl] = useState(false);
+
+  // Atualizar URL local quando apiUrl do contexto mudar
+  useEffect(() => {
+    setCustomUrl(apiUrl);
+  }, [apiUrl]);
+
+  const handleSaveCustomUrl = async () => {
+    if (!customUrl.trim()) {
+      showToast('URL não pode estar vazia', 'error');
+      return;
+    }
+
+    // Validar formato básico de URL
+    if (!customUrl.startsWith('http://') && !customUrl.startsWith('https://')) {
+      showToast('URL deve começar com http:// ou https://', 'error');
+      return;
+    }
+
+    await setApiUrl(customUrl.trim());
+    setIsEditingUrl(false);
+  };
 
   useEffect(() => {
     loadDevices();
@@ -215,19 +240,39 @@ export default function SettingsScreen() {
             </TouchableOpacity>
 
             {serverOnline && (
-              <View style={{ marginTop: 12 }}>
-                <Text style={styles.subText}>
-                  Dispositivos conectados ao servidor:
+              <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#334155' }}>
+                <Text style={[styles.sectionTitle, { fontSize: 14, marginBottom: 12 }]}>
+                  📡 Conexões Ativas
                 </Text>
-                <Text style={styles.subText}>
-                  - App: {connectedDevices.app}
-                </Text>
-                <Text style={styles.subText}>
-                  - ESP32 Pai: {connectedDevices.esp32Pai}
-                </Text>
-                <Text style={styles.subText}>
-                  - ESP32 CAM: {connectedDevices.esp32Cam}
-                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 8 }}>
+                  <View style={{ alignItems: 'center' }}>
+                    <View style={{ backgroundColor: connectedDevices.app > 0 ? '#22C55E20' : '#64748B20', padding: 12, borderRadius: 12, marginBottom: 6 }}>
+                      <Text style={{ fontSize: 24 }}>📱</Text>
+                    </View>
+                    <Text style={[styles.subText, { fontSize: 12, fontWeight: '600' }]}>Apps</Text>
+                    <View style={{ backgroundColor: connectedDevices.app > 0 ? '#22C55E' : '#64748B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 4 }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' }}>{connectedDevices.app}</Text>
+                    </View>
+                  </View>
+                  <View style={{ alignItems: 'center' }}>
+                    <View style={{ backgroundColor: connectedDevices.esp32Pai > 0 ? '#22C55E20' : '#64748B20', padding: 12, borderRadius: 12, marginBottom: 6 }}>
+                      <Text style={{ fontSize: 24 }}>🎛️</Text>
+                    </View>
+                    <Text style={[styles.subText, { fontSize: 12, fontWeight: '600' }]}>PAI</Text>
+                    <View style={{ backgroundColor: connectedDevices.esp32Pai > 0 ? '#22C55E' : '#64748B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 4 }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' }}>{connectedDevices.esp32Pai}</Text>
+                    </View>
+                  </View>
+                  <View style={{ alignItems: 'center' }}>
+                    <View style={{ backgroundColor: connectedDevices.esp32Cam > 0 ? '#22C55E20' : '#64748B20', padding: 12, borderRadius: 12, marginBottom: 6 }}>
+                      <Text style={{ fontSize: 24 }}>📷</Text>
+                    </View>
+                    <Text style={[styles.subText, { fontSize: 12, fontWeight: '600' }]}>CAM</Text>
+                    <View style={{ backgroundColor: connectedDevices.esp32Cam > 0 ? '#22C55E' : '#64748B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 4 }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' }}>{connectedDevices.esp32Cam}</Text>
+                    </View>
+                  </View>
+                </View>
               </View>
             )}
           </>
@@ -238,143 +283,359 @@ export default function SettingsScreen() {
       {serverOnline && esp32Status && (
         <View style={styles.card}>
           <View style={styles.rowBetween2}>
-            <Image
-              source={Info}
-              style={styles.largeIcon}
-              resizeMode="contain"
-              accessibilityLabel="Ícone de módulos ESP32"
-            />
-            <Text
-              style={styles.sectionTitle}
-              accessibilityLabel="Status dos Módulos ESP32"
-            >
-              Módulos ESP32
+            <Text style={styles.sectionTitle}>
+              🔌 Módulos ESP32
             </Text>
           </View>
 
           {/* PAI */}
-          <View style={styles.rowBetween}>
-            <Text style={styles.subText}>• PAI (Mestre)</Text>
-            <View
-              style={[
-                styles.deviceTag,
-                esp32Status.pai.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
-              ]}
-            >
-              <Text style={styles.deviceTagText}>
-                {esp32Status.pai.connected ? 'Conectado' : 'Desconectado'}
-              </Text>
+          <View style={{ backgroundColor: esp32Status.pai.connected ? '#22C55E10' : '#64748B10', padding: 12, borderRadius: 12, marginBottom: 12, marginTop: 12 }}>
+            <View style={styles.rowBetween}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 20, marginRight: 8 }}>🎛️</Text>
+                <Text style={[styles.subText, { fontWeight: '600' }]}>PAI (Mestre)</Text>
+              </View>
+              <View
+                style={[
+                  styles.deviceTag,
+                  esp32Status.pai.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
+                ]}
+              >
+                <Text style={styles.deviceTagText}>
+                  {esp32Status.pai.connected ? '● Conectado' : '○ Offline'}
+                </Text>
+              </View>
             </View>
+            {esp32Status.pai.connected && esp32Status.pai.lastSeen && (
+              <Text style={[styles.subText, { fontSize: 10, marginLeft: 28, marginTop: 4, opacity: 0.7 }]}>
+                🕐 Última atualização: {new Date(esp32Status.pai.lastSeen).toLocaleTimeString()}
+              </Text>
+            )}
           </View>
-          {esp32Status.pai.connected && esp32Status.pai.lastSeen && (
-            <Text style={[styles.subText, { fontSize: 10, marginLeft: 20 }]}>
-              Última atualização: {new Date(esp32Status.pai.lastSeen).toLocaleTimeString()}
-            </Text>
-          )}
 
           {/* SENSOR */}
-          <View style={styles.rowBetween}>
-            <Text style={styles.subText}>• Sensor (Distância)</Text>
-            <View
-              style={[
-                styles.deviceTag,
-                esp32Status.sensor.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
-              ]}
-            >
-              <Text style={styles.deviceTagText}>
-                {esp32Status.sensor.connected ? 'Conectado' : 'Desconectado'}
-              </Text>
+          <View style={{ backgroundColor: esp32Status.sensor.connected ? '#22C55E10' : '#64748B10', padding: 12, borderRadius: 12, marginBottom: 12 }}>
+            <View style={styles.rowBetween}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 20, marginRight: 8 }}>📏</Text>
+                <Text style={[styles.subText, { fontWeight: '600' }]}>Sensor (Distância)</Text>
+              </View>
+              <View
+                style={[
+                  styles.deviceTag,
+                  esp32Status.sensor.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
+                ]}
+              >
+                <Text style={styles.deviceTagText}>
+                  {esp32Status.sensor.connected ? '● Conectado' : '○ Offline'}
+                </Text>
+              </View>
             </View>
+            {esp32Status.sensor.connected && (
+              <View style={{ marginLeft: 28, marginTop: 8 }}>
+                {typeof esp32Status.sensor.distance === 'number' && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Text style={[styles.subText, { fontSize: 11, flex: 1 }]}>
+                      📍 Distância: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.distance}cm</Text>
+                    </Text>
+                    <View style={{ 
+                      backgroundColor: esp32Status.sensor.level === 'danger' ? '#EF4444' : esp32Status.sensor.level === 'warning' ? '#F59E0B' : '#22C55E',
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 8
+                    }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: 'bold' }}>
+                        {esp32Status.sensor.level?.toUpperCase() || 'SAFE'}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                {typeof esp32Status.sensor.temperature === 'number' && (
+                  <Text style={[styles.subText, { fontSize: 11, marginBottom: 4 }]}>
+                    🌡️ Temperatura: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.temperature.toFixed(1)}°C</Text> | 
+                    💧 Umidade: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.humidity?.toFixed(1)}%</Text>
+                  </Text>
+                )}
+                {typeof esp32Status.sensor.rssi === 'number' && (
+                  <Text style={[styles.subText, { fontSize: 11 }]}>
+                    📶 Sinal: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.rssi}dBm</Text>
+                  </Text>
+                )}
+              </View>
+            )}
           </View>
-          {esp32Status.sensor.connected && (
-            <View style={{ marginLeft: 20 }}>
-              {typeof esp32Status.sensor.distance === 'number' && (
-                <Text style={[styles.subText, { fontSize: 10 }]}>
-                  Distância: {esp32Status.sensor.distance}cm | Nível: {esp32Status.sensor.level || 'N/A'}
-                </Text>
-              )}
-              {typeof esp32Status.sensor.temperature === 'number' && (
-                <Text style={[styles.subText, { fontSize: 10 }]}>
-                  Temp: {esp32Status.sensor.temperature.toFixed(1)}°C | Umidade: {esp32Status.sensor.humidity?.toFixed(1)}%
-                </Text>
-              )}
-              {typeof esp32Status.sensor.rssi === 'number' && (
-                <Text style={[styles.subText, { fontSize: 10 }]}>
-                  RSSI: {esp32Status.sensor.rssi}dBm
-                </Text>
-              )}
-            </View>
-          )}
 
           {/* MOTOR */}
-          <View style={styles.rowBetween}>
-            <Text style={styles.subText}>• Motor (Vibração)</Text>
-            <View
-              style={[
-                styles.deviceTag,
-                esp32Status.motor.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
-              ]}
-            >
-              <Text style={styles.deviceTagText}>
-                {esp32Status.motor.connected ? 'Conectado' : 'Desconectado'}
-              </Text>
+          <View style={{ backgroundColor: esp32Status.motor.connected ? '#22C55E10' : '#64748B10', padding: 12, borderRadius: 12, marginBottom: 12 }}>
+            <View style={styles.rowBetween}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 20, marginRight: 8 }}>📳</Text>
+                <Text style={[styles.subText, { fontWeight: '600' }]}>Motor (Vibração)</Text>
+              </View>
+              <View
+                style={[
+                  styles.deviceTag,
+                  esp32Status.motor.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
+                ]}
+              >
+                <Text style={styles.deviceTagText}>
+                  {esp32Status.motor.connected ? '● Conectado' : '○ Offline'}
+                </Text>
+              </View>
             </View>
+            {esp32Status.motor.connected && typeof esp32Status.motor.vibrationLevel === 'number' && (
+              <View style={{ marginLeft: 28, marginTop: 8, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={[styles.subText, { fontSize: 11, marginRight: 8 }]}>
+                  Intensidade:
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 4 }}>
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <View
+                      key={level}
+                      style={{
+                        width: 6,
+                        height: level * 4 + 8,
+                        backgroundColor: level <= esp32Status.motor.vibrationLevel! ? '#22C55E' : '#334155',
+                        borderRadius: 2,
+                      }}
+                    />
+                  ))}
+                </View>
+                <Text style={[styles.subText, { fontSize: 11, marginLeft: 8, fontWeight: 'bold' }]}>
+                  {esp32Status.motor.vibrationLevel}
+                </Text>
+              </View>
+            )}
           </View>
-          {esp32Status.motor.connected && typeof esp32Status.motor.vibrationLevel === 'number' && (
-            <Text style={[styles.subText, { fontSize: 10, marginLeft: 20 }]}>
-              Nível de vibração: {esp32Status.motor.vibrationLevel}
-            </Text>
-          )}
 
           {/* CAMERA */}
-          <View style={styles.rowBetween}>
-            <Text style={styles.subText}>• Câmera (Detecção)</Text>
-            <View
-              style={[
-                styles.deviceTag,
-                esp32Status.camera.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
-              ]}
-            >
-              <Text style={styles.deviceTagText}>
-                {esp32Status.camera.connected ? 'Conectado' : 'Desconectado'}
-              </Text>
+          <View style={{ backgroundColor: esp32Status.camera.connected ? '#22C55E10' : '#64748B10', padding: 12, borderRadius: 12 }}>
+            <View style={styles.rowBetween}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 20, marginRight: 8 }}>📷</Text>
+                <Text style={[styles.subText, { fontWeight: '600' }]}>Câmera (Detecção)</Text>
+              </View>
+              <View
+                style={[
+                  styles.deviceTag,
+                  esp32Status.camera.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
+                ]}
+              >
+                <Text style={styles.deviceTagText}>
+                  {esp32Status.camera.connected ? '● Conectado' : '○ Offline'}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
       )}
 
+      {/* Configuração da URL da API */}
+      <View style={styles.card}>
+        <View style={styles.rowBetween2}>
+          <Text style={styles.sectionTitle}>🌐 Configuração da API</Text>
+        </View>
+
+        <View style={{ marginTop: 12 }}>
+          <Text style={[styles.subText, { fontSize: 12, marginBottom: 8, opacity: 0.7 }]}>
+            URL atual: {apiUrl}
+          </Text>
+
+          {!isEditingUrl ? (
+            <TouchableOpacity
+              style={[styles.button2, { marginTop: 8 }]}
+              onPress={() => setIsEditingUrl(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Editar URL da API"
+            >
+              <Text style={styles.buttonText}>✏️ Alterar URL</Text>
+            </TouchableOpacity>
+          ) : (
+            <View>
+              <TextInput
+                style={{
+                  backgroundColor: '#334155',
+                  color: '#FFFFFF',
+                  padding: 12,
+                  borderRadius: 8,
+                  fontSize: 14,
+                  marginBottom: 12,
+                  borderWidth: 1,
+                  borderColor: '#475569',
+                }}
+                value={customUrl}
+                onChangeText={setCustomUrl}
+                placeholder="http://192.168.1.100:3000"
+                placeholderTextColor="#64748B"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                accessibilityLabel="Campo de URL da API"
+              />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  style={[styles.button2, { flex: 1, backgroundColor: '#22C55E' }]}
+                  onPress={handleSaveCustomUrl}
+                  accessibilityRole="button"
+                  accessibilityLabel="Salvar URL"
+                >
+                  <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>💾 Salvar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button2, { flex: 1, backgroundColor: '#EF4444' }]}
+                  onPress={() => {
+                    setCustomUrl(apiUrl);
+                    setIsEditingUrl(false);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancelar edição"
+                >
+                  <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>❌ Cancelar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          <Text style={[styles.subText, { fontSize: 11, marginTop: 12, opacity: 0.6, fontStyle: 'italic' }]}>
+            💡 Dica: Use o IP local da sua rede (ex: http://192.168.1.100:3000) para conectar ao servidor
+          </Text>
+        </View>
+      </View>
+
       {/* Systems Health */}
       {serverOnline && systemsHealth && (
         <View style={styles.card}>
-          <Text
-            style={styles.sectionTitle}
-            accessibilityLabel="Saúde dos Sistemas"
-          >
-            Saúde dos Sistemas
+          <Text style={styles.sectionTitle}>
+            💚 Saúde dos Sistemas
           </Text>
-          <View style={styles.rowBetween}>
-            <Text style={styles.subText}>• PAI (Controlador)</Text>
-            <Text style={[styles.subText, { color: systemsHealth.pai ? '#22C55E' : '#EF4444' }]}>
-              {systemsHealth.pai ? '✓ OK' : '✗ Falha'}
-            </Text>
-          </View>
-          <View style={styles.rowBetween}>
-            <Text style={styles.subText}>• Sensor (Distância)</Text>
-            <Text style={[styles.subText, { color: systemsHealth.sensor ? '#22C55E' : '#EF4444' }]}>
-              {systemsHealth.sensor ? '✓ OK' : '✗ Falha'}
-            </Text>
-          </View>
-          <View style={styles.rowBetween}>
-            <Text style={styles.subText}>• Vibracall (Motor)</Text>
-            <Text style={[styles.subText, { color: systemsHealth.vibracall ? '#22C55E' : '#EF4444' }]}>
-              {systemsHealth.vibracall ? '✓ OK' : '✗ Falha'}
-            </Text>
-          </View>
-          <View style={styles.rowBetween}>
-            <Text style={styles.subText}>• Câmera (Visão)</Text>
-            <Text style={[styles.subText, { color: systemsHealth.camera ? '#22C55E' : '#EF4444' }]}>
-              {systemsHealth.camera ? '✓ OK' : '✗ Falha'}
-            </Text>
+          
+          <View style={{ marginTop: 12 }}>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              backgroundColor: systemsHealth.pai ? '#22C55E15' : '#EF444415',
+              padding: 12,
+              borderRadius: 10,
+              marginBottom: 8,
+              borderLeftWidth: 4,
+              borderLeftColor: systemsHealth.pai ? '#22C55E' : '#EF4444'
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 18, marginRight: 10 }}>🎛️</Text>
+                <Text style={[styles.subText, { fontWeight: '600' }]}>PAI (Controlador)</Text>
+              </View>
+              <View style={{ 
+                backgroundColor: systemsHealth.pai ? '#22C55E' : '#EF4444',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 20,
+                flexDirection: 'row',
+                alignItems: 'center'
+              }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold', marginRight: 4 }}>
+                  {systemsHealth.pai ? '✓' : '✗'}
+                </Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>
+                  {systemsHealth.pai ? 'OK' : 'FALHA'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              backgroundColor: systemsHealth.sensor ? '#22C55E15' : '#EF444415',
+              padding: 12,
+              borderRadius: 10,
+              marginBottom: 8,
+              borderLeftWidth: 4,
+              borderLeftColor: systemsHealth.sensor ? '#22C55E' : '#EF4444'
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 18, marginRight: 10 }}>📏</Text>
+                <Text style={[styles.subText, { fontWeight: '600' }]}>Sensor (Distância)</Text>
+              </View>
+              <View style={{ 
+                backgroundColor: systemsHealth.sensor ? '#22C55E' : '#EF4444',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 20,
+                flexDirection: 'row',
+                alignItems: 'center'
+              }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold', marginRight: 4 }}>
+                  {systemsHealth.sensor ? '✓' : '✗'}
+                </Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>
+                  {systemsHealth.sensor ? 'OK' : 'FALHA'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              backgroundColor: systemsHealth.vibracall ? '#22C55E15' : '#EF444415',
+              padding: 12,
+              borderRadius: 10,
+              marginBottom: 8,
+              borderLeftWidth: 4,
+              borderLeftColor: systemsHealth.vibracall ? '#22C55E' : '#EF4444'
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 18, marginRight: 10 }}>📳</Text>
+                <Text style={[styles.subText, { fontWeight: '600' }]}>Vibracall (Motor)</Text>
+              </View>
+              <View style={{ 
+                backgroundColor: systemsHealth.vibracall ? '#22C55E' : '#EF4444',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 20,
+                flexDirection: 'row',
+                alignItems: 'center'
+              }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold', marginRight: 4 }}>
+                  {systemsHealth.vibracall ? '✓' : '✗'}
+                </Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>
+                  {systemsHealth.vibracall ? 'OK' : 'FALHA'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              backgroundColor: systemsHealth.camera ? '#22C55E15' : '#EF444415',
+              padding: 12,
+              borderRadius: 10,
+              borderLeftWidth: 4,
+              borderLeftColor: systemsHealth.camera ? '#22C55E' : '#EF4444'
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 18, marginRight: 10 }}>📷</Text>
+                <Text style={[styles.subText, { fontWeight: '600' }]}>Câmera (Visão)</Text>
+              </View>
+              <View style={{ 
+                backgroundColor: systemsHealth.camera ? '#22C55E' : '#EF4444',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 20,
+                flexDirection: 'row',
+                alignItems: 'center'
+              }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold', marginRight: 4 }}>
+                  {systemsHealth.camera ? '✓' : '✗'}
+                </Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>
+                  {systemsHealth.camera ? 'OK' : 'FALHA'}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
       )}
