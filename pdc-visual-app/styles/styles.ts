@@ -18,7 +18,7 @@ export const styles = StyleSheet.create({
 
   // Cards
   card: {
-    backgroundColor: 'rgba(30, 41, 59, 0.97)',
+    backgroundColor: '#1e293b',
     borderRadius: 15,
     padding: 15,
     marginBottom: 15,
@@ -34,7 +34,7 @@ export const styles = StyleSheet.create({
     borderColor: '#334155',
   },
   subCard: {
-    backgroundColor: 'rgba(48, 56, 80, 0.97)',
+    backgroundColor: '#303850',
     borderRadius: 15,
     padding: 15,
     flex: 1,

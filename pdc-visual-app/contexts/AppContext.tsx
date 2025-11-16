@@ -152,7 +152,13 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       await storageService.set(API_URL_STORAGE_KEY, url);
       setApiUrlState(url);
       console.log('URL da API salva:', url);
-      showToast('URL da API salva com sucesso!', 'success');
+      
+      // Reconectar WebSocket com nova URL
+      disconnectWebSocket();
+      setTimeout(() => {
+        connectWebSocket();
+        showToast('URL atualizada! Reconectando...', 'info');
+      }, 500);
     } catch (error) {
       console.error('Erro ao salvar URL:', error);
       showToast('Erro ao salvar URL da API', 'error');

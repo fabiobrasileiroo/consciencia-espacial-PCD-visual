@@ -1,2 +1,44 @@
 # Ignore npm lockfile so EAS uses pnpm-lock.yaml
 package-lock.json
+
+# Development files
+.expo/
+.vscode/
+.git/
+.github/
+
+# Generated folders
+dist/
+web-build/
+ios/
+android/
+
+# Test and documentation
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__/
+e2e/
+docs/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+*.iml
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

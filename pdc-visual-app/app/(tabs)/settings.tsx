@@ -1,8 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
-import { styles } from './styles';
+import { styles } from '../../styles/styles';
 import { useApp } from '@/contexts/AppContext';
 import { BluetoothService, BluetoothDevice } from '@/services/bluetooth-service';
+import { SkeletonCard } from '@/components/skeleton-loader';
+import { 
+  Globe, 
+  Plug, 
+  Ruler, 
+  Vibrate, 
+  Camera, 
+  Smartphone,
+  Settings as SettingsIcon,
+  Thermometer,
+  Droplets,
+  Signal,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Clock,
+  Heart,
+  Save,
+  X,
+  Lightbulb
+} from 'lucide-react-native';
 
 const LogoImage = require('@/assets/images/logo.png');
 const Increase = require('@/assets/images/increase.png');
@@ -247,7 +268,7 @@ export default function SettingsScreen() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 8 }}>
                   <View style={{ alignItems: 'center' }}>
                     <View style={{ backgroundColor: connectedDevices.app > 0 ? '#22C55E20' : '#64748B20', padding: 12, borderRadius: 12, marginBottom: 6 }}>
-                      <Text style={{ fontSize: 24 }}>📱</Text>
+                      <Smartphone color={connectedDevices.app > 0 ? '#22C55E' : '#64748B'} size={24} />
                     </View>
                     <Text style={[styles.subText, { fontSize: 12, fontWeight: '600' }]}>Apps</Text>
                     <View style={{ backgroundColor: connectedDevices.app > 0 ? '#22C55E' : '#64748B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 4 }}>
@@ -256,7 +277,7 @@ export default function SettingsScreen() {
                   </View>
                   <View style={{ alignItems: 'center' }}>
                     <View style={{ backgroundColor: connectedDevices.esp32Pai > 0 ? '#22C55E20' : '#64748B20', padding: 12, borderRadius: 12, marginBottom: 6 }}>
-                      <Text style={{ fontSize: 24 }}>🎛️</Text>
+                      <SettingsIcon color={connectedDevices.esp32Pai > 0 ? '#22C55E' : '#64748B'} size={24} />
                     </View>
                     <Text style={[styles.subText, { fontSize: 12, fontWeight: '600' }]}>PAI</Text>
                     <View style={{ backgroundColor: connectedDevices.esp32Pai > 0 ? '#22C55E' : '#64748B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 4 }}>
@@ -265,7 +286,7 @@ export default function SettingsScreen() {
                   </View>
                   <View style={{ alignItems: 'center' }}>
                     <View style={{ backgroundColor: connectedDevices.esp32Cam > 0 ? '#22C55E20' : '#64748B20', padding: 12, borderRadius: 12, marginBottom: 6 }}>
-                      <Text style={{ fontSize: 24 }}>📷</Text>
+                      <Camera color={connectedDevices.esp32Cam > 0 ? '#22C55E' : '#64748B'} size={24} />
                     </View>
                     <Text style={[styles.subText, { fontSize: 12, fontWeight: '600' }]}>CAM</Text>
                     <View style={{ backgroundColor: connectedDevices.esp32Cam > 0 ? '#22C55E' : '#64748B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 4 }}>
@@ -280,11 +301,14 @@ export default function SettingsScreen() {
       </View>
 
       {/* Status dos Módulos ESP32 */}
-      {serverOnline && esp32Status && (
+      {!serverOnline && refreshing ? (
+        <SkeletonCard />
+      ) : serverOnline && esp32Status ? (
         <View style={styles.card}>
           <View style={styles.rowBetween2}>
+            <Plug color="#22C55E" size={24} />
             <Text style={styles.sectionTitle}>
-              🔌 Módulos ESP32
+              Módulos ESP32
             </Text>
           </View>
 
@@ -292,7 +316,7 @@ export default function SettingsScreen() {
           <View style={{ backgroundColor: esp32Status.pai.connected ? '#22C55E10' : '#64748B10', padding: 12, borderRadius: 12, marginBottom: 12, marginTop: 12 }}>
             <View style={styles.rowBetween}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, marginRight: 8 }}>🎛️</Text>
+                <SettingsIcon color={esp32Status.pai.connected ? '#22C55E' : '#64748B'} size={20} style={{ marginRight: 8 }} />
                 <Text style={[styles.subText, { fontWeight: '600' }]}>PAI (Mestre)</Text>
               </View>
               <View
@@ -307,9 +331,12 @@ export default function SettingsScreen() {
               </View>
             </View>
             {esp32Status.pai.connected && esp32Status.pai.lastSeen && (
-              <Text style={[styles.subText, { fontSize: 10, marginLeft: 28, marginTop: 4, opacity: 0.7 }]}>
-                🕐 Última atualização: {new Date(esp32Status.pai.lastSeen).toLocaleTimeString()}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 28, marginTop: 4, opacity: 0.7 }}>
+                <Clock color="#94A3B8" size={10} style={{ marginRight: 4 }} />
+                <Text style={[styles.subText, { fontSize: 10 }]}>
+                  Última atualização: {new Date(esp32Status.pai.lastSeen).toLocaleTimeString()}
+                </Text>
+              </View>
             )}
           </View>
 
@@ -317,7 +344,7 @@ export default function SettingsScreen() {
           <View style={{ backgroundColor: esp32Status.sensor.connected ? '#22C55E10' : '#64748B10', padding: 12, borderRadius: 12, marginBottom: 12 }}>
             <View style={styles.rowBetween}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, marginRight: 8 }}>📏</Text>
+                <Ruler color={esp32Status.sensor.connected ? '#22C55E' : '#64748B'} size={20} style={{ marginRight: 8 }} />
                 <Text style={[styles.subText, { fontWeight: '600' }]}>Sensor (Distância)</Text>
               </View>
               <View
@@ -351,15 +378,28 @@ export default function SettingsScreen() {
                   </View>
                 )}
                 {typeof esp32Status.sensor.temperature === 'number' && (
-                  <Text style={[styles.subText, { fontSize: 11, marginBottom: 4 }]}>
-                    🌡️ Temperatura: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.temperature.toFixed(1)}°C</Text> |
-                    💧 Umidade: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.humidity?.toFixed(1)}%</Text>
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Thermometer color="#F59E0B" size={11} />
+                      <Text style={[styles.subText, { fontSize: 11 }]}>
+                        Temperatura: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.temperature.toFixed(1)}°C</Text>
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Droplets color="#3B82F6" size={11} />
+                      <Text style={[styles.subText, { fontSize: 11 }]}>
+                        Umidade: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.humidity?.toFixed(1)}%</Text>
+                      </Text>
+                    </View>
+                  </View>
                 )}
                 {typeof esp32Status.sensor.rssi === 'number' && (
-                  <Text style={[styles.subText, { fontSize: 11 }]}>
-                    📶 Sinal: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.rssi}dBm</Text>
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Signal color="#22C55E" size={11} />
+                    <Text style={[styles.subText, { fontSize: 11 }]}>
+                      Sinal: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.rssi}dBm</Text>
+                    </Text>
+                  </View>
                 )}
               </View>
             )}
@@ -369,7 +409,7 @@ export default function SettingsScreen() {
           <View style={{ backgroundColor: esp32Status.motor.connected ? '#22C55E10' : '#64748B10', padding: 12, borderRadius: 12, marginBottom: 12 }}>
             <View style={styles.rowBetween}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, marginRight: 8 }}>📳</Text>
+                <Vibrate color={esp32Status.motor.connected ? '#22C55E' : '#64748B'} size={20} style={{ marginRight: 8 }} />
                 <Text style={[styles.subText, { fontWeight: '600' }]}>Motor (Vibração)</Text>
               </View>
               <View
@@ -412,7 +452,7 @@ export default function SettingsScreen() {
           <View style={{ backgroundColor: esp32Status.camera.connected ? '#22C55E10' : '#64748B10', padding: 12, borderRadius: 12 }}>
             <View style={styles.rowBetween}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, marginRight: 8 }}>📷</Text>
+                <Camera color={esp32Status.camera.connected ? '#22C55E' : '#64748B'} size={20} style={{ marginRight: 8 }} />
                 <Text style={[styles.subText, { fontWeight: '600' }]}>Câmera (Detecção)</Text>
               </View>
               <View
@@ -428,12 +468,13 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
-      )}
+      ) : null}
 
       {/* Configuração da URL da API */}
       <View style={styles.card}>
         <View style={styles.rowBetween2}>
-          <Text style={styles.sectionTitle}>🌐 Configuração da API</Text>
+          <Globe color="#22C55E" size={24} />
+          <Text style={styles.sectionTitle}>Configuração da API</Text>
         </View>
 
         <View style={{ marginTop: 12 }}>
@@ -479,7 +520,8 @@ export default function SettingsScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Salvar URL"
                 >
-                  <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>💾 Salvar</Text>
+                  <Save color="#FFFFFF" size={16} />
+                  <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Salvar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button2, { flex: 1, backgroundColor: '#EF4444' }]}
@@ -490,24 +532,31 @@ export default function SettingsScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Cancelar edição"
                 >
-                  <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>❌ Cancelar</Text>
+                  <X color="#FFFFFF" size={16} />
+                  <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Cancelar</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
-          <Text style={[styles.subText, { fontSize: 11, marginTop: 12, opacity: 0.6, fontStyle: 'italic' }]}>
-            💡 Dica: Use o IP local da sua rede (ex: http://192.168.1.100:3000) para conectar ao servidor
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 12, gap: 6 }}>
+            <Lightbulb color="#F59E0B" size={14} style={{ marginTop: 2 }} />
+            <Text style={[styles.subText, { fontSize: 11, opacity: 0.6, fontStyle: 'italic', flex: 1 }]}>
+              Dica: Use o IP local da sua rede (ex: http://192.168.1.100:3000) para conectar ao servidor
+            </Text>
+          </View>
         </View>
       </View>
 
       {/* Systems Health */}
       {serverOnline && systemsHealth && (
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>
-            💚 Saúde dos Sistemas
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Heart color="#22C55E" size={24} fill="#22C55E" />
+            <Text style={styles.sectionTitle}>
+              Saúde dos Sistemas
+            </Text>
+          </View>
 
           <View style={{ marginTop: 12 }}>
             <View style={{
@@ -522,7 +571,7 @@ export default function SettingsScreen() {
               borderLeftColor: systemsHealth.pai ? '#22C55E' : '#EF4444'
             }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, marginRight: 10 }}>🎛️</Text>
+                <SettingsIcon color={systemsHealth.pai ? '#22C55E' : '#EF4444'} size={18} style={{ marginRight: 10 }} />
                 <Text style={[styles.subText, { fontWeight: '600' }]}>PAI (Controlador)</Text>
               </View>
               <View style={{
@@ -533,9 +582,11 @@ export default function SettingsScreen() {
                 flexDirection: 'row',
                 alignItems: 'center'
               }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold', marginRight: 4 }}>
-                  {systemsHealth.pai ? '✓' : '✗'}
-                </Text>
+                {systemsHealth.pai ? (
+                  <CheckCircle color="#FFFFFF" size={12} style={{ marginRight: 4 }} />
+                ) : (
+                  <XCircle color="#FFFFFF" size={12} style={{ marginRight: 4 }} />
+                )}
                 <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>
                   {systemsHealth.pai ? 'OK' : 'FALHA'}
                 </Text>
@@ -554,7 +605,7 @@ export default function SettingsScreen() {
               borderLeftColor: systemsHealth.sensor ? '#22C55E' : '#EF4444'
             }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, marginRight: 10 }}>📏</Text>
+                <Ruler color={systemsHealth.sensor ? '#22C55E' : '#EF4444'} size={18} style={{ marginRight: 10 }} />
                 <Text style={[styles.subText, { fontWeight: '600' }]}>Sensor (Distância)</Text>
               </View>
               <View style={{
@@ -565,9 +616,11 @@ export default function SettingsScreen() {
                 flexDirection: 'row',
                 alignItems: 'center'
               }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold', marginRight: 4 }}>
-                  {systemsHealth.sensor ? '✓' : '✗'}
-                </Text>
+                {systemsHealth.sensor ? (
+                  <CheckCircle color="#FFFFFF" size={12} style={{ marginRight: 4 }} />
+                ) : (
+                  <XCircle color="#FFFFFF" size={12} style={{ marginRight: 4 }} />
+                )}
                 <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>
                   {systemsHealth.sensor ? 'OK' : 'FALHA'}
                 </Text>
@@ -586,7 +639,7 @@ export default function SettingsScreen() {
               borderLeftColor: systemsHealth.vibracall ? '#22C55E' : '#EF4444'
             }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, marginRight: 10 }}>📳</Text>
+                <Vibrate color={systemsHealth.vibracall ? '#22C55E' : '#EF4444'} size={18} style={{ marginRight: 10 }} />
                 <Text style={[styles.subText, { fontWeight: '600' }]}>Vibracall (Motor)</Text>
               </View>
               <View style={{
@@ -597,9 +650,11 @@ export default function SettingsScreen() {
                 flexDirection: 'row',
                 alignItems: 'center'
               }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold', marginRight: 4 }}>
-                  {systemsHealth.vibracall ? '✓' : '✗'}
-                </Text>
+                {systemsHealth.vibracall ? (
+                  <CheckCircle color="#FFFFFF" size={12} style={{ marginRight: 4 }} />
+                ) : (
+                  <XCircle color="#FFFFFF" size={12} style={{ marginRight: 4 }} />
+                )}
                 <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>
                   {systemsHealth.vibracall ? 'OK' : 'FALHA'}
                 </Text>
@@ -617,7 +672,7 @@ export default function SettingsScreen() {
               borderLeftColor: systemsHealth.camera ? '#22C55E' : '#EF4444'
             }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, marginRight: 10 }}>📷</Text>
+                <Camera color={systemsHealth.camera ? '#22C55E' : '#EF4444'} size={18} style={{ marginRight: 10 }} />
                 <Text style={[styles.subText, { fontWeight: '600' }]}>Câmera (Visão)</Text>
               </View>
               <View style={{
@@ -628,9 +683,11 @@ export default function SettingsScreen() {
                 flexDirection: 'row',
                 alignItems: 'center'
               }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold', marginRight: 4 }}>
-                  {systemsHealth.camera ? '✓' : '✗'}
-                </Text>
+                {systemsHealth.camera ? (
+                  <CheckCircle color="#FFFFFF" size={12} style={{ marginRight: 4 }} />
+                ) : (
+                  <XCircle color="#FFFFFF" size={12} style={{ marginRight: 4 }} />
+                )}
                 <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>
                   {systemsHealth.camera ? 'OK' : 'FALHA'}
                 </Text>
@@ -698,7 +755,7 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { marginBottom: 30 }]}>
         <Text
           style={styles.sectionTitle}
           accessibilityLabel="Suporte e Informações"

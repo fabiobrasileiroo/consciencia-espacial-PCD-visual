@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Alert, RefreshControl } from 'react-native';
-import { styles } from './styles';
+import { View, Text, TouchableOpacity, ScrollView, Image, Alert, RefreshControl, ActivityIndicator } from 'react-native';
+import { styles } from '../../styles/styles';
 import { useApp } from '@/contexts/AppContext';
 import { Audio } from 'expo-av';
 import { BluetoothService } from '@/services/bluetooth-service';
 import { HistoryItemCard } from '@/components/history-item-card';
 import { Toast } from '@/components/toast';
+import { SkeletonCard, SkeletonStats } from '@/components/skeleton-loader';
 
 const Logo = require('@/assets/images/logo.png');
 const Glasses = require('@/assets/images/glasses.png');
@@ -307,66 +308,72 @@ export default function HomeScreen() {
         >
           Estatísticas
         </Text>
-        <View style={styles.horizontalCardsContainer}>
-          <View style={styles.subCard}>
-            <Image
-              source={Thermometer}
-              style={styles.smallIcon}
-              resizeMode="contain"
-              accessibilityLabel="Termômetro"
-            />
-            <Text
-              style={styles.subCardText}
-              accessibilityLabel={`Temperatura: ${stats.temperature} graus Celsius`}
-            >
-              {stats.temperature}°C
-            </Text>
-          </View>
+        {!serverOnline && refreshing ? (
+          <SkeletonStats />
+        ) : (
+          <>
+            <View style={styles.horizontalCardsContainer}>
+              <View style={styles.subCard}>
+                <Image
+                  source={Thermometer}
+                  style={styles.smallIcon}
+                  resizeMode="contain"
+                  accessibilityLabel="Termômetro"
+                />
+                <Text
+                  style={styles.subCardText}
+                  accessibilityLabel={`Temperatura: ${stats.temperature} graus Celsius`}
+                >
+                  {stats.temperature}°C
+                </Text>
+              </View>
 
-          <View style={styles.subCard}>
-            <Image
-              source={Clock}
-              style={styles.smallIcon}
-              resizeMode="contain"
-              accessibilityLabel="Relógio"
-            />
-            <Text
-              style={styles.subCardText}
-              accessibilityLabel={`Tempo de uso: ${stats.usageTime}`}
-            >
-              {stats.usageTime}
-            </Text>
-          </View>
+              <View style={styles.subCard}>
+                <Image
+                  source={Clock}
+                  style={styles.smallIcon}
+                  resizeMode="contain"
+                  accessibilityLabel="Relógio"
+                />
+                <Text
+                  style={styles.subCardText}
+                  accessibilityLabel={`Tempo de uso: ${stats.usageTime}`}
+                >
+                  {stats.usageTime}
+                </Text>
+              </View>
 
-          <View style={styles.subCard}>
-            <Image
-              source={Warning}
-              style={styles.smallIcon}
-              resizeMode="contain"
-              accessibilityLabel="Avisos"
-            />
-            <Text
-              style={styles.subCardText}
-              accessibilityLabel={`${stats.warnings} avisos detectados`}
-            >
-              {stats.warnings} avisos
-            </Text>
-          </View>
-        </View>
-
-        {/* Distância do objeto detectado */}
-        {detectedObjectDistance !== null && (
-          <View style={{ marginTop: 16, padding: 12, backgroundColor: '#334155', borderRadius: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 24, marginRight: 8 }}>📏</Text>
-              <Text style={[styles.subText, { fontSize: 14, fontWeight: '600' }]}>
-                Objeto à frente:
-              </Text>
-              <Text style={[styles.subText, { fontSize: 16, fontWeight: 'bold', marginLeft: 8, color: '#22C55E' }]}>
-                {detectedObjectDistance}cm
-              </Text>
+              <View style={styles.subCard}>
+                <Image
+                  source={Warning}
+                  style={styles.smallIcon}
+                  resizeMode="contain"
+                  accessibilityLabel="Avisos"
+                />
+                <Text
+                  style={styles.subCardText}
+                  accessibilityLabel={`${stats.warnings} avisos detectados`}
+                >
+                  {stats.warnings} avisos
+                </Text>
+              </View>
             </View>
-          </View>
+
+            {/* Distância do objeto detectado */}
+            {detectedObjectDistance !== null && (
+              <View style={{ marginTop: 16, padding: 12, backgroundColor: '#334155', borderRadius: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 24, marginRight: 8 }}>📏</Text>
+                  <Text style={[styles.subText, { fontSize: 14, fontWeight: '600' }]}>
+                    Objeto à frente:
+                  </Text>
+                  <Text style={[styles.subText, { fontSize: 16, fontWeight: 'bold', marginLeft: 8, color: '#22C55E' }]}>
+                    {detectedObjectDistance}cm
+                  </Text>
+                </View>
+              </View>
+            )}
+          </>
         )}
       </View>
 
@@ -431,7 +438,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { marginBottom: 30 }]}>
         <Text
           style={styles.sectionTitle}
           accessibilityLabel="Transcrição em tempo real"
@@ -457,11 +464,7 @@ export default function HomeScreen() {
             style={styles.emptyHistoryText}
             accessibilityLabel="Aguardando dados de transcrição"
           >
-            Aguardando detecção de objetos...
-            {'\n'}
-            {wsConnected
-              ? 'Conectado e pronto para receber dados.'
-              : 'Conecte-se ao WebSocket para começar.'}
+            {!serverOnline ? '❌ Servidor offline. Reconecte para receber dados.' : 'Aguardando detecção de objetos...\n' + (wsConnected ? 'Conectado e pronto para receber dados.' : 'Conecte-se ao WebSocket para começar.')}
           </Text>
         )}
       </View>
