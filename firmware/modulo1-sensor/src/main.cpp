@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <esp_now.h>
 #include <WiFi.h>
+#include <esp_wifi.h>  // Necessário para esp_wifi_set_channel
 #include <Wire.h>
 #include <Adafruit_Sensor.h>  // https://github.com/adafruit/Adafruit_Sensor
 
@@ -40,6 +41,9 @@ uint8_t broadcastAddress[] = {0xEC, 0x64, 0xC9, 0x7C, 0x38, 0x30};
 typedef struct struct_message {
   int distance;
   int moduleId;
+  float temperature;
+  float humidity;
+  uint8_t sensorOk;
 } struct_message;
 
 struct_message myData;
@@ -95,10 +99,17 @@ void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(); // Desconectar de qualquer rede anterior
   
-  Serial.println("\n╔════════════════════════════════════╗");
+  // ⚠️ IMPORTANTE: Definir o mesmo canal WiFi do PAI
+  // O PAI usa o canal da rede WiFi "FJ"
+  // SEU ROTEADOR ESTÁ NO CANAL 4 (visto no monitor serial do PAI)
+  int8_t channel = 4; // ← CANAL 4 DO SEU ROTEADOR "FJ"
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  
+  Serial.println("\n╔════════════════════════════════════════╗");
   Serial.println("║   MÓDULO 1 - SENSOR HC-SR04        ║");
-  Serial.println("╚════════════════════════════════════╝");
+  Serial.println("╚════════════════════════════════════════╝");
   Serial.printf("📍 MAC Address: %s\n", WiFi.macAddress().c_str());
+  Serial.printf("📡 Canal WiFi: %d\n", channel);
   Serial.printf("📡 MAC do PAI: %02X:%02X:%02X:%02X:%02X:%02X\n",
     broadcastAddress[0], broadcastAddress[1], broadcastAddress[2],
     broadcastAddress[3], broadcastAddress[4], broadcastAddress[5]);
@@ -264,9 +275,12 @@ void loop() {
     
     Serial.println("╠════════════════════════════════════════════════════╣");
     
-    // Preparar dados para envio
-    myData.distance = distance;
-    myData.moduleId = 1; // ID do Módulo 1
+  // Preparar dados para envio
+  myData.distance = distance;
+  myData.moduleId = 1; // ID do Módulo 1
+  myData.temperature = aht10_ok ? temperature : -127.0f;
+  myData.humidity = aht10_ok ? humidity : -1.0f;
+  myData.sensorOk = aht10_ok ? 1 : 0;
     
     // Enviar dados via ESP-NOW
     esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));

@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitor de Eventos ESP32 - SSE</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #667eea;
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .status {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .status-card {
+      background: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .status-card h3 {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .status-card .value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .connected {
+      color: #10b981;
+    }
+
+    .disconnected {
+      color: #ef4444;
+    }
+
+    .events {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+    }
+
+    .event-section {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .event-section h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #667eea;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .event-log {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 5px;
+      padding: 10px;
+      background: #f9fafb;
+    }
+
+    .event-item {
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .event-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .event-sensor {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+    }
+
+    .event-alert {
+      background: #fee2e2;
+      border-left: 4px solid #ef4444;
+      animation: pulse 1s ease-in-out;
+    }
+
+    .event-status {
+      background: #dbeafe;
+      border-left: 4px solid #3b82f6;
+    }
+
+    .event-detection {
+      background: #e9d5ff;
+      border-left: 4px solid #a855f7;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.7;
+      }
+    }
+
+    .timestamp {
+      color: #6b7280;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    .distance-bar {
+      width: 100%;
+      height: 30px;
+      background: #e5e7eb;
+      border-radius: 15px;
+      overflow: hidden;
+      margin: 10px 0;
+      position: relative;
+    }
+
+    .distance-fill {
+      height: 100%;
+      transition: width 0.3s ease, background-color 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .vibration-level {
+      display: flex;
+      gap: 5px;
+      margin: 10px 0;
+    }
+
+    .vib-bar {
+      flex: 1;
+      height: 20px;
+      background: #e5e7eb;
+      border-radius: 3px;
+      transition: background-color 0.3s ease;
+    }
+
+    .vib-bar.active {
+      background: #667eea;
+    }
+
+    .danger {
+      background: #ef4444;
+    }
+
+    .warning {
+      background: #f59e0b;
+    }
+
+    .caution {
+      background: #10b981;
+    }
+
+    .safe {
+      background: #6b7280;
+    }
+
+    .no-events {
+      text-align: center;
+      color: #9ca3af;
+      padding: 20px;
+      font-style: italic;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #5a67d8;
+    }
+
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .controls {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>🎯 Monitor de Eventos ESP32 em Tempo Real</h1>
+      <p>Conectado via Server-Sent Events (SSE)</p>
+      <div class="controls">
+        <button id="clearBtn">🗑️ Limpar Eventos</button>
+        <button id="reconnectBtn">🔄 Reconectar</button>
+        <button id="testBtn">🧪 Enviar Comando Teste</button>
+      </div>
+    </header>
+
+    <div class="status">
+      <div class="status-card">
+        <h3>Status da Conexão</h3>
+        <div class="value" id="connectionStatus">Conectando...</div>
+      </div>
+      <div class="status-card">
+        <h3>Distância Atual</h3>
+        <div class="value" id="currentDistance">-- cm</div>
+      </div>
+      <div class="status-card">
+        <h3>Nível de Alerta</h3>
+        <div class="value" id="alertLevel">--</div>
+      </div>
+      <div class="status-card">
+        <h3>Eventos Recebidos</h3>
+        <div class="value" id="eventCount">0</div>
+      </div>
+    </div>
+
+    <div class="events">
+      <!-- Sensor Updates -->
+      <div class="event-section">
+        <h2>📏 Sensor de Distância</h2>
+        <div id="distanceDisplay">
+          <div class="distance-bar">
+            <div class="distance-fill safe" id="distanceBar" style="width: 0%">0 cm</div>
+          </div>
+          <div class="vibration-level">
+            <div class="vib-bar" data-level="1"></div>
+            <div class="vib-bar" data-level="2"></div>
+            <div class="vib-bar" data-level="3"></div>
+          </div>
+        </div>
+        <div class="event-log" id="sensorLog">
+          <div class="no-events">Aguardando dados do sensor...</div>
+        </div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="event-section">
+        <h2>🚨 Alertas</h2>
+        <div class="event-log" id="alertLog">
+          <div class="no-events">Nenhum alerta ainda...</div>
+        </div>
+      </div>
+
+      <!-- Module Status -->
+      <div class="event-section">
+        <h2>📊 Status dos Módulos</h2>
+        <div class="event-log" id="statusLog">
+          <div class="no-events">Aguardando status...</div>
+        </div>
+      </div>
+
+      <!-- Object Detections -->
+      <div class="event-section">
+        <h2>🎯 Detecções de Objetos</h2>
+        <div class="event-log" id="detectionLog">
+          <div class="no-events">Aguardando detecções...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SERVER_URL = 'http://localhost:3000';
+    let eventSource = null;
+    let eventCount = 0;
+    let currentDistance = 0;
+    let currentLevel = 'safe';
+
+    // Elementos do DOM
+    const connectionStatus = document.getElementById('connectionStatus');
+    const currentDistanceEl = document.getElementById('currentDistance');
+    const alertLevelEl = document.getElementById('alertLevel');
+    const eventCountEl = document.getElementById('eventCount');
+    const distanceBar = document.getElementById('distanceBar');
+    const sensorLog = document.getElementById('sensorLog');
+    const alertLog = document.getElementById('alertLog');
+    const statusLog = document.getElementById('statusLog');
+    const detectionLog = document.getElementById('detectionLog');
+
+    // Conectar ao SSE
+    function connect() {
+      if (eventSource) {
+        eventSource.close();
+      }
+
+      connectionStatus.textContent = 'Conectando...';
+      connectionStatus.className = 'value';
+
+      eventSource = new EventSource(`${SERVER_URL}/api/stream/events`);
+
+      eventSource.onopen = () => {
+        connectionStatus.textContent = '✅ Conectado';
+        connectionStatus.className = 'value connected';
+      };
+
+      eventSource.onerror = () => {
+        connectionStatus.textContent = '❌ Desconectado';
+        connectionStatus.className = 'value disconnected';
+      };
+
+      // Evento: sensor-update
+      eventSource.addEventListener('sensor-update', (event) => {
+        const data = JSON.parse(event.data);
+        eventCount++;
+        eventCountEl.textContent = eventCount;
+
+        currentDistance = data.distance;
+        currentLevel = data.alertLevel;
+
+        currentDistanceEl.textContent = `${data.distance} cm`;
+        alertLevelEl.textContent = getLevelText(data.alertLevel);
+
+        updateDistanceBar(data.distance, data.alertLevel);
+        updateVibrationBars(data.vibrationLevel);
+
+        addEventToLog(sensorLog, 'event-sensor', `
+          <strong>📏 Distância: ${data.distance} cm</strong><br>
+          Nível: ${getLevelText(data.alertLevel)}<br>
+          Vibração: ${data.vibrationLevel}/3<br>
+          Mensagem: ${data.alertMsg || 'N/A'}<br>
+          <div class="timestamp">${new Date(data.timestamp).toLocaleTimeString()}</div>
+        `);
+      });
+
+      // Evento: alert
+      eventSource.addEventListener('alert', (event) => {
+        const data = JSON.parse(event.data);
+        eventCount++;
+        eventCountEl.textContent = eventCount;
+
+        addEventToLog(alertLog, 'event-alert', `
+          <strong>🚨 ${data.type.toUpperCase()}</strong><br>
+          ${data.message}<br>
+          Distância: ${data.distance} cm<br>
+          <div class="timestamp">${new Date(data.timestamp).toLocaleTimeString()}</div>
+        `);
+      });
+
+      // Evento: esp32-status
+      eventSource.addEventListener('esp32-status', (event) => {
+        const data = JSON.parse(event.data);
+        eventCount++;
+        eventCountEl.textContent = eventCount;
+
+        let details = `Conectado: ${data.connected ? '✅ Sim' : '❌ Não'}`;
+        if (data.distance !== undefined) details += `<br>Distância: ${data.distance} cm`;
+        if (data.vibrationLevel !== undefined) details += `<br>Vibração: ${data.vibrationLevel}/3`;
+        if (data.rssi !== undefined) details += `<br>RSSI: ${data.rssi} dBm`;
+
+        addEventToLog(statusLog, 'event-status', `
+          <strong>📊 ${data.module.toUpperCase()}</strong><br>
+          ${details}<br>
+          <div class="timestamp">${new Date(data.timestamp).toLocaleTimeString()}</div>
+        `);
+      });
+
+      // Evento: detection
+      eventSource.addEventListener('detection', (event) => {
+        const data = JSON.parse(event.data);
+        eventCount++;
+        eventCountEl.textContent = eventCount;
+
+        let objectsList = '';
+        if (data.objects && data.objects.length > 0) {
+          objectsList = data.objects.map((obj, i) =>
+            `${i + 1}. ${obj.name} (${obj.confidence}%)`
+          ).join('<br>');
+        }
+
+        addEventToLog(detectionLog, 'event-detection', `
+          <strong>🎯 ${data.description || 'Detecção'}</strong><br>
+          Objetos: ${data.count || 0}<br>
+          ${objectsList}<br>
+          <div class="timestamp">${new Date(data.timestamp).toLocaleTimeString()}</div>
+        `);
+      });
+    }
+
+    function updateDistanceBar(distance, level) {
+      const maxDistance = 200;
+      const percentage = Math.min((distance / maxDistance) * 100, 100);
+
+      distanceBar.style.width = `${percentage}%`;
+      distanceBar.textContent = `${distance} cm`;
+      distanceBar.className = `distance-fill ${level}`;
+    }
+
+    function updateVibrationBars(level) {
+      document.querySelectorAll('.vib-bar').forEach((bar, index) => {
+        if (index < level) {
+          bar.classList.add('active');
+        } else {
+          bar.classList.remove('active');
+        }
+      });
+    }
+
+    function getLevelText(level) {
+      const texts = {
+        danger: '🔴 PERIGO',
+        warning: '🟡 ATENÇÃO',
+        caution: '🟢 CUIDADO',
+        safe: '⚪ SEGURO'
+      };
+      return texts[level] || level;
+    }
+
+    function addEventToLog(logElement, className, content) {
+      // Remover mensagem "Aguardando..."
+      const noEvents = logElement.querySelector('.no-events');
+      if (noEvents) {
+        noEvents.remove();
+      }
+
+      const eventItem = document.createElement('div');
+      eventItem.className = `event-item ${className}`;
+      eventItem.innerHTML = content;
+
+      logElement.insertBefore(eventItem, logElement.firstChild);
+
+      // Limitar a 20 eventos por log
+      while (logElement.children.length > 20) {
+        logElement.removeChild(logElement.lastChild);
+      }
+    }
+
+    // Botões
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      [sensorLog, alertLog, statusLog, detectionLog].forEach(log => {
+        log.innerHTML = '<div class="no-events">Log limpo...</div>';
+      });
+      eventCount = 0;
+      eventCountEl.textContent = '0';
+    });
+
+    document.getElementById('reconnectBtn').addEventListener('click', () => {
+      connect();
+    });
+
+    document.getElementById('testBtn').addEventListener('click', async () => {
+      try {
+        const response = await fetch(`${SERVER_URL}/api/esp32/command`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: 'test_motor' })
+        });
+        const data = await response.json();
+        alert(data.success ? '✅ Comando enviado!' : '❌ Erro: ' + data.message);
+      } catch (err) {
+        alert('❌ Erro ao enviar comando: ' + err.message);
+      }
+    });
+
+    // Iniciar conexão ao carregar
+    connect();
+  </script>
+</body>
+
+</html>
