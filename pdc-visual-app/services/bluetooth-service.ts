@@ -35,14 +35,29 @@ export class BluetoothService implements IBluetoothService {
       // Nota: Isso requer módulos nativos específicos
       // Por enquanto, mockamos baseado em padrões comuns
 
-      if (this.connectedToESP32) {
-        devices.push({
-          id: 'esp32-1',
-          name: 'LUMI - SmartGlasses v1.0',
-          connected: true,
-          type: 'esp32',
-        });
-      }
+      // Dispositivo principal de óculos (representa ESP32 + servidor OK)
+      devices.push({
+        id: 'esp32-1',
+        name: 'LUMI - SmartGlasses v1.0',
+        connected: this.connectedToESP32,
+        type: 'esp32',
+      });
+
+      // Fones de ouvido Bluetooth (sempre listados, conexão controlada em outra tela)
+      devices.push({
+        id: 'airpods-1',
+        name: 'Apple - Airpods v1.0',
+        connected: false,
+        type: 'audio',
+      });
+
+      // Pulseira / acessório complementar
+      devices.push({
+        id: 'bracelet-1',
+        name: 'LUMI - SmartBracelet v1.0',
+        connected: false,
+        type: 'other',
+      });
 
       this.connectedDevices = devices;
       return devices;

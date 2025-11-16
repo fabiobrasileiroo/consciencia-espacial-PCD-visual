@@ -33,6 +33,8 @@ export default function HomeScreen() {
     disconnectWebSocket,
     testWithHistoryItem,
     stats,
+    serverOnline,
+    connectedDevices,
     toast,
     showToast,
     hideToast,
@@ -212,9 +214,9 @@ export default function HomeScreen() {
               </Text>
               <Text
                 style={styles.subText}
-                accessibilityLabel={`Tempo estimado de duração da bateria: 2 horas e 30 minutos`}
+                accessibilityLabel={`Tempo de uso desde que o servidor iniciou: ${stats.usageTime}`}
               >
-                2h 30min
+                {stats.usageTime}
               </Text>
             </View>
           </View>
@@ -230,9 +232,9 @@ export default function HomeScreen() {
             />
             <Text
               style={styles.subText}
-              accessibilityLabel={`Bateria em 100 por cento`}
+              accessibilityLabel={`Servidor ${serverOnline ? 'online' : 'offline'}`}
             >
-              100%
+              {serverOnline ? 'Servidor online' : 'Servidor offline'}
             </Text>
           </View>
           <View

@@ -12,7 +12,18 @@ const Info = require('@/assets/images/warning.png');
 const Devices = require('@/assets/images/devices.png');
 
 export default function SettingsScreen() {
-  const { volume, setVolume, setSystemVolume, showToast, wsConnected, connectWebSocket } = useApp();
+  const {
+    volume,
+    setVolume,
+    setSystemVolume,
+    showToast,
+    wsConnected,
+    connectWebSocket,
+    serverOnline,
+    connectedDevices,
+    esp32Status,
+    systemsHealth,
+  } = useApp();
   const [bluetoothDevices, setBluetoothDevices] = useState<BluetoothDevice[]>([]);
   const [scanning, setScanning] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -119,14 +130,14 @@ export default function SettingsScreen() {
           >
             <Text
               style={styles.deviceTagText}
-              accessibilityLabel={wsConnected ? 'Servidor online' : 'Servidor offline'}
+              accessibilityLabel={serverOnline ? 'Servidor online' : 'Servidor offline'}
             >
-              {wsConnected ? 'Online' : 'Offline'}
+              {serverOnline ? 'Online' : 'Offline'}
             </Text>
           </View>
         </View>
 
-        {!wsConnected && (
+        {!serverOnline && (
           <TouchableOpacity
             style={[styles.button2, { marginTop: 12 }]}
             onPress={() => {
@@ -202,9 +213,171 @@ export default function SettingsScreen() {
             >
               <Text style={styles.buttonText}>🔄 Atualizar Dispositivos</Text>
             </TouchableOpacity>
+
+            {serverOnline && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={styles.subText}>
+                  Dispositivos conectados ao servidor:
+                </Text>
+                <Text style={styles.subText}>
+                  - App: {connectedDevices.app}
+                </Text>
+                <Text style={styles.subText}>
+                  - ESP32 Pai: {connectedDevices.esp32Pai}
+                </Text>
+                <Text style={styles.subText}>
+                  - ESP32 CAM: {connectedDevices.esp32Cam}
+                </Text>
+              </View>
+            )}
           </>
         )}
       </View>
+
+      {/* Status dos Módulos ESP32 */}
+      {serverOnline && esp32Status && (
+        <View style={styles.card}>
+          <View style={styles.rowBetween2}>
+            <Image
+              source={Info}
+              style={styles.largeIcon}
+              resizeMode="contain"
+              accessibilityLabel="Ícone de módulos ESP32"
+            />
+            <Text
+              style={styles.sectionTitle}
+              accessibilityLabel="Status dos Módulos ESP32"
+            >
+              Módulos ESP32
+            </Text>
+          </View>
+
+          {/* PAI */}
+          <View style={styles.rowBetween}>
+            <Text style={styles.subText}>• PAI (Mestre)</Text>
+            <View
+              style={[
+                styles.deviceTag,
+                esp32Status.pai.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
+              ]}
+            >
+              <Text style={styles.deviceTagText}>
+                {esp32Status.pai.connected ? 'Conectado' : 'Desconectado'}
+              </Text>
+            </View>
+          </View>
+          {esp32Status.pai.connected && esp32Status.pai.lastSeen && (
+            <Text style={[styles.subText, { fontSize: 10, marginLeft: 20 }]}>
+              Última atualização: {new Date(esp32Status.pai.lastSeen).toLocaleTimeString()}
+            </Text>
+          )}
+
+          {/* SENSOR */}
+          <View style={styles.rowBetween}>
+            <Text style={styles.subText}>• Sensor (Distância)</Text>
+            <View
+              style={[
+                styles.deviceTag,
+                esp32Status.sensor.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
+              ]}
+            >
+              <Text style={styles.deviceTagText}>
+                {esp32Status.sensor.connected ? 'Conectado' : 'Desconectado'}
+              </Text>
+            </View>
+          </View>
+          {esp32Status.sensor.connected && (
+            <View style={{ marginLeft: 20 }}>
+              {typeof esp32Status.sensor.distance === 'number' && (
+                <Text style={[styles.subText, { fontSize: 10 }]}>
+                  Distância: {esp32Status.sensor.distance}cm | Nível: {esp32Status.sensor.level || 'N/A'}
+                </Text>
+              )}
+              {typeof esp32Status.sensor.temperature === 'number' && (
+                <Text style={[styles.subText, { fontSize: 10 }]}>
+                  Temp: {esp32Status.sensor.temperature.toFixed(1)}°C | Umidade: {esp32Status.sensor.humidity?.toFixed(1)}%
+                </Text>
+              )}
+              {typeof esp32Status.sensor.rssi === 'number' && (
+                <Text style={[styles.subText, { fontSize: 10 }]}>
+                  RSSI: {esp32Status.sensor.rssi}dBm
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* MOTOR */}
+          <View style={styles.rowBetween}>
+            <Text style={styles.subText}>• Motor (Vibração)</Text>
+            <View
+              style={[
+                styles.deviceTag,
+                esp32Status.motor.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
+              ]}
+            >
+              <Text style={styles.deviceTagText}>
+                {esp32Status.motor.connected ? 'Conectado' : 'Desconectado'}
+              </Text>
+            </View>
+          </View>
+          {esp32Status.motor.connected && typeof esp32Status.motor.vibrationLevel === 'number' && (
+            <Text style={[styles.subText, { fontSize: 10, marginLeft: 20 }]}>
+              Nível de vibração: {esp32Status.motor.vibrationLevel}
+            </Text>
+          )}
+
+          {/* CAMERA */}
+          <View style={styles.rowBetween}>
+            <Text style={styles.subText}>• Câmera (Detecção)</Text>
+            <View
+              style={[
+                styles.deviceTag,
+                esp32Status.camera.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
+              ]}
+            >
+              <Text style={styles.deviceTagText}>
+                {esp32Status.camera.connected ? 'Conectado' : 'Desconectado'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Systems Health */}
+      {serverOnline && systemsHealth && (
+        <View style={styles.card}>
+          <Text
+            style={styles.sectionTitle}
+            accessibilityLabel="Saúde dos Sistemas"
+          >
+            Saúde dos Sistemas
+          </Text>
+          <View style={styles.rowBetween}>
+            <Text style={styles.subText}>• PAI (Controlador)</Text>
+            <Text style={[styles.subText, { color: systemsHealth.pai ? '#22C55E' : '#EF4444' }]}>
+              {systemsHealth.pai ? '✓ OK' : '✗ Falha'}
+            </Text>
+          </View>
+          <View style={styles.rowBetween}>
+            <Text style={styles.subText}>• Sensor (Distância)</Text>
+            <Text style={[styles.subText, { color: systemsHealth.sensor ? '#22C55E' : '#EF4444' }]}>
+              {systemsHealth.sensor ? '✓ OK' : '✗ Falha'}
+            </Text>
+          </View>
+          <View style={styles.rowBetween}>
+            <Text style={styles.subText}>• Vibracall (Motor)</Text>
+            <Text style={[styles.subText, { color: systemsHealth.vibracall ? '#22C55E' : '#EF4444' }]}>
+              {systemsHealth.vibracall ? '✓ OK' : '✗ Falha'}
+            </Text>
+          </View>
+          <View style={styles.rowBetween}>
+            <Text style={styles.subText}>• Câmera (Visão)</Text>
+            <Text style={[styles.subText, { color: systemsHealth.camera ? '#22C55E' : '#EF4444' }]}>
+              {systemsHealth.camera ? '✓ OK' : '✗ Falha'}
+            </Text>
+          </View>
+        </View>
+      )}
 
       <View style={styles.card}>
         <Text

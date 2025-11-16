@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { useWebSocket, WebSocketMessage } from '@/hooks/use-websocket';
-import { Platform } from 'react-native';
+import { useWebSocket } from '@/hooks/use-websocket';
+import { ttsService, hapticsService } from '@/services/service-provider';
 
 interface DetectionHistory {
   id: string;
@@ -12,6 +12,39 @@ interface Stats {
   temperature: number;
   warnings: number;
   usageTime: string;
+}
+
+interface ConnectedDevicesSummary {
+  app: number;
+  esp32Pai: number;
+  esp32Cam: number;
+}
+
+interface ESP32ModuleStatus {
+  connected: boolean;
+  lastSeen: string | null;
+  distance?: number | null;
+  level?: string | null;
+  temperature?: number | null;
+  humidity?: number | null;
+  sensorOk?: boolean | null;
+  rssi?: number | null;
+  vibrationLevel?: number | null;
+  lastUpdate?: number | null;
+}
+
+interface ESP32StatusMap {
+  pai: ESP32ModuleStatus;
+  sensor: ESP32ModuleStatus;
+  motor: ESP32ModuleStatus;
+  camera: ESP32ModuleStatus;
+}
+
+interface SystemsHealth {
+  pai: boolean;
+  sensor: boolean;
+  vibracall: boolean;
+  camera: boolean;
 }
 
 interface ToastConfig {
@@ -32,7 +65,7 @@ interface AppContextType {
 
   // WebSocket
   wsConnected: boolean;
-  lastDetection: WebSocketMessage | null;
+  lastDetection: any | null;
   detectionHistory: DetectionHistory[];
   sendWebSocketMessage: (message: any) => boolean;
   connectWebSocket: () => void;
@@ -43,11 +76,19 @@ interface AppContextType {
   // Stats
   stats: Stats;
 
+  // Status do servidor
+  serverOnline: boolean;
+  connectedDevices: ConnectedDevicesSummary;
+  esp32Status: ESP32StatusMap | null;
+  systemsHealth: SystemsHealth | null;
+
   // Toast
   toast: ToastConfig;
   showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
   hideToast: () => void;
-}const AppContext = createContext<AppContextType | undefined>(undefined);
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
 interface AppProviderProps {
   children: ReactNode;
@@ -64,6 +105,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     warnings: 3,
     usageTime: '5h 0min',
   });
+  const [serverOnline, setServerOnline] = useState(false);
+  const [connectedDevices, setConnectedDevices] = useState<ConnectedDevicesSummary>({
+    app: 0,
+    esp32Pai: 0,
+    esp32Cam: 0,
+  });
+  const [esp32Status, setEsp32Status] = useState<ESP32StatusMap | null>(null);
+  const [systemsHealth, setSystemsHealth] = useState<SystemsHealth | null>(null);
   const [toast, setToast] = useState<ToastConfig>({
     visible: false,
     message: '',
@@ -109,7 +158,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     setToast(prev => ({ ...prev, visible: false }));
   };
 
-  // WebSocket - ajuste a URL conforme seu servidor
+  // WebSocket - conecta no servidor Vision API (/ws)
   const {
     isConnected: wsConnected,
     lastMessage: lastDetection,
@@ -117,7 +166,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     connect: connectWebSocket,
     disconnect: disconnectWebSocket,
   } = useWebSocket({
-    url: 'ws://192.168.1.100:3001', // Ajuste conforme necessário
+    url: process.env.EXPO_PUBLIC_WS_URL || 'ws://localhost:3000/ws',
     autoConnect: true, // Conectar automaticamente
   });
 
@@ -128,24 +177,137 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     }
   }, [wsConnected]);
 
+  // Buscar status HTTP periodicamente para uptime e dispositivos conectados
+  useEffect(() => {
+    const baseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch(`${baseUrl}/api/status`);
+        if (!res.ok) throw new Error('Status HTTP não OK');
+        const json = await res.json();
+
+        setServerOnline(true);
+
+        // uptime em segundos vindo do servidor
+        const uptimeSeconds: number = json.uptime ?? 0;
+        const hours = Math.floor(uptimeSeconds / 3600);
+        const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+        const usageTimeStr = `${hours}h ${minutes}min`;
+
+        setStats(prev => ({
+          temperature: prev.temperature,
+          warnings: prev.warnings,
+          usageTime: usageTimeStr,
+        }));
+
+        if (json.connectedClients) {
+          setConnectedDevices({
+            app: json.connectedClients.app ?? 0,
+            esp32Pai: json.connectedClients.esp32Pai ?? 0,
+            esp32Cam: json.connectedClients.esp32Cam ?? 0,
+          });
+        }
+
+        // Atualizar status dos módulos ESP32
+        if (json.esp32Status) {
+          setEsp32Status(json.esp32Status);
+        }
+
+        // Atualizar systemsHealth
+        if (json.systemsHealth) {
+          setSystemsHealth(json.systemsHealth);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar /api/status:', error);
+        setServerOnline(false);
+      }
+    }
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Atualizar histórico quando receber nova detecção
   useEffect(() => {
-    if (lastDetection && lastDetection.type === 'detection') {
-      const newItem: DetectionHistory = {
-        id: Date.now().toString(),
-        text: lastDetection.data.text || 'Objeto detectado',
-        timestamp: lastDetection.timestamp || new Date().toISOString(),
-      };
+    if (!lastDetection) return;
 
-      setDetectionHistory(prev => [newItem, ...prev].slice(0, 50)); // Manter apenas 50 itens
-      setCurrentTranscription(newItem.text);
+    try {
+      const { type, data } = lastDetection as any;
 
-      // Mostrar toast para nova detecção
-      showToast(`Detectado: ${newItem.text}`, 'info');
-    } else if (lastDetection && lastDetection.type === 'transcription') {
-      setCurrentTranscription(lastDetection.data.text || '');
+      // Histórico inicial vindo do servidor
+      if (type === 'history' && Array.isArray(data)) {
+        const items: DetectionHistory[] = data
+          .map((d: any, index: number) => ({
+            id: (d.timestamp || Date.now() + index).toString(),
+            text: d.description || 'Objeto detectado',
+            timestamp: new Date(d.timestamp || Date.now()).toISOString(),
+          }))
+          .reverse();
+        if (items.length > 0) {
+          setDetectionHistory(items.slice(0, 50));
+          setCurrentTranscription(items[0].text);
+        }
+        return;
+      }
+
+      // Última detecção atual
+      if (type === 'current' && data) {
+        setCurrentTranscription(data.description || '');
+        return;
+      }
+
+      // Nova detecção em tempo real
+      if (type === 'detection' && data) {
+        const newItem: DetectionHistory = {
+          id: (data.timestamp || Date.now()).toString(),
+          text: data.description || 'Objeto detectado',
+          timestamp: new Date(data.timestamp || Date.now()).toISOString(),
+        };
+
+        setDetectionHistory(prev => [newItem, ...prev].slice(0, 50));
+        setCurrentTranscription(newItem.text);
+
+        // Falar a descrição
+        ttsService.speak(newItem.text).catch(err => {
+          console.error('Erro no TTS:', err);
+        });
+
+        // Vibração básica em qualquer detecção
+        hapticsService.impact('medium').catch(err => {
+          console.error('Erro no haptics:', err);
+        });
+
+        showToast(`Detectado: ${newItem.text}`, 'info');
+        return;
+      }
+
+      // Atualização de sensor -> pode influenciar stats / avisos
+      if (type === 'sensor-update' && data) {
+        const { alertLevel, temperature } = data;
+
+        setStats(prev => ({
+          temperature: typeof temperature === 'number' ? temperature : prev.temperature,
+          warnings: alertLevel === 'warning' || alertLevel === 'danger' ? prev.warnings + 1 : prev.warnings,
+          usageTime: prev.usageTime,
+        }));
+
+        if (alertLevel === 'danger') {
+          hapticsService.vibratePattern([200, 100, 200, 100, 300]).catch(err => {
+            console.error('Erro ao vibrar padrão:', err);
+          });
+          showToast('Perigo! Objeto muito próximo.', 'warning');
+        }
+
+        return;
+      }
+    } catch (error) {
+      console.error('Erro ao processar mensagem WebSocket:', error);
     }
-  }, [lastDetection]); const testWithHistoryItem = (item: DetectionHistory) => {
+  }, [lastDetection]);
+
+  const testWithHistoryItem = (item: DetectionHistory) => {
     console.log('Testando com item do histórico:', item);
     setCurrentTranscription(item.text);
 
@@ -182,6 +344,10 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     toast,
     showToast,
     hideToast,
+    serverOnline,
+    connectedDevices,
+    esp32Status,
+    systemsHealth,
   };
 
   return (
