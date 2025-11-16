@@ -47,6 +47,11 @@ source venv/bin/activate && pip install --upgrade pip
 source venv/bin/activate && pip install torch torchvision opencv-python h5py scipy
 ```
 
+``` bash
+source venv/bin/activate
+pip install googletrans==4.0.0rc1
+```
+
 Este comando instala:
 
 - **PyTorch**: Framework de Deep Learning (~900MB)
