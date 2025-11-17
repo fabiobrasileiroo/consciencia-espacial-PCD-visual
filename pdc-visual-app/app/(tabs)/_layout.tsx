@@ -45,6 +45,16 @@ export default function TabLayout() {
           title: 'Home',
         }}
       />
+      
+      {}
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'Histórico',
+          href: null, 
+        }}
+      />
+      
       <Tabs.Screen
         name="settings"
         options={{
