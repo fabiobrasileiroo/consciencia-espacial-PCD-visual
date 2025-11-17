@@ -50,6 +50,7 @@ source venv/bin/activate && pip install torch torchvision opencv-python h5py sci
 ```bash
 source venv/bin/activate
 pip install googletrans==4.0.0rc1
+pip install websocket
 ```
 
 Este comando instala:

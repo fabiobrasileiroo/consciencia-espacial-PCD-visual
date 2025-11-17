@@ -16,6 +16,7 @@
 #include <Arduino.h>
 #include <esp_now.h>
 #include <WiFi.h>
+#include <esp_wifi.h>  // Necessário para esp_wifi_set_channel
 
 // Pino do motor de vibração (vibracall)
 #define MOTOR_PIN 4
@@ -77,29 +78,36 @@ void setup() {
   ledcAttachPin(MOTOR_PIN, PWM_CHANNEL);
   ledcWrite(PWM_CHANNEL, 0); // Iniciar desligado
   
-  Serial.println("\n\n=================================");
-  Serial.println("MÓDULO 3 - MOTOR DE VIBRAÇÃO");
-  Serial.println("=================================");
+  Serial.println("\n\n╔════════════════════════════════════════╗");
+  Serial.println("║   MÓDULO 3 - MOTOR DE VIBRAÇÃO      ║");
+  Serial.println("╚════════════════════════════════════════╝");
   
   // Configurar WiFi em modo Station
   WiFi.mode(WIFI_STA);
+  WiFi.disconnect(); // Desconectar de qualquer rede anterior
   
-  Serial.print("MAC Address do Módulo 3: ");
-  Serial.println(WiFi.macAddress());
-  Serial.println("IMPORTANTE: Use este MAC no ESP32-PAI!");
+  // ⚠️ IMPORTANTE: Definir o mesmo canal WiFi do PAI
+  // O PAI usa o canal da rede WiFi "FJ" = CANAL 4
+  int8_t channel = 4; // ← CANAL 4 DO SEU ROTEADOR "FJ"
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  
+  Serial.printf("📍 MAC Address: %s\n", WiFi.macAddress().c_str());
+  Serial.printf("📡 Canal WiFi: %d\n", channel);
+  Serial.println("IMPORTANTE: Este MAC deve estar registrado no ESP32-PAI!");
   
   // Inicializar ESP-NOW
   if (esp_now_init() != ESP_OK) {
-    Serial.println("Erro ao inicializar ESP-NOW");
+    Serial.println("❌ Erro ao inicializar ESP-NOW");
     return;
   }
   
-  Serial.println("ESP-NOW inicializado com sucesso!");
+  Serial.println("✅ ESP-NOW inicializado com sucesso!");
   
   // Registrar callback de recepção
   esp_now_register_recv_cb(OnDataRecv);
   
-  Serial.println("Aguardando comandos do ESP32-PAI...\n");
+  Serial.println("✅ Sistema pronto para receber comandos!");
+  Serial.println("⏳ Aguardando comandos do ESP32-PAI...\n");
 }
 
 void loop() {
