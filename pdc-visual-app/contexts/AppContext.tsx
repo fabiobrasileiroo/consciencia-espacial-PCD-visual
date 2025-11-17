@@ -124,6 +124,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [systemsHealth, setSystemsHealth] = useState<SystemsHealth | null>(null);
   const [detectedObjectDistance, setDetectedObjectDistance] = useState<number | null>(null);
   const [apiUrl, setApiUrlState] = useState<string>(process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000');
+  console.log('API URL atual:', apiUrl);
   const [toast, setToast] = useState<ToastConfig>({
     visible: false,
     message: '',
