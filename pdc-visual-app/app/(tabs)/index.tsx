@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Alert, RefreshControl } from 'react-native';
-import { styles } from './styles';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Image, Alert, RefreshControl, Animated } from 'react-native';
+import { styles } from './_styles';
 import { useApp } from '@/contexts/AppContext';
 import { Audio } from 'expo-av';
 import { BluetoothService } from '@/services/bluetooth-service';
 import { HistoryItemCard } from '@/components/history-item-card';
 import { Toast } from '@/components/toast';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useDetections } from '@/hooks/use-detections';
+const s = styles as any;
 
 const Logo = require('@/assets/images/logo.png');
 const Glasses = require('@/assets/images/glasses.png');
@@ -19,6 +23,8 @@ const Bluetooth = require('@/assets/images/bluetooth.png');
 const Switch = require('@/assets/images/switch.png');
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   const {
     mode,
     setMode,
@@ -38,9 +44,51 @@ export default function HomeScreen() {
     hideToast,
   } = useApp();
 
+  const {
+    detections,
+    isSpeaking,
+    speakDetections,
+    stopSpeaking,
+  } = useDetections({
+    url: process.env.EXPO_PUBLIC_API_URL_DETECTIONS ?? '',
+    pollingInterval: 5000,
+    autoStart: true,
+  });
+
   const [bluetoothService] = useState(() => new BluetoothService());
   const [esp32Connected, setEsp32Connected] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (isSpeaking) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.2,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+
+      return () => {
+        pulse.stop();
+        pulseAnim.setValue(1);
+      };
+    } else {
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isSpeaking, pulseAnim]);
 
   useEffect(() => {
     // Verificar conexão ESP32 ao carregar
@@ -294,7 +342,93 @@ export default function HomeScreen() {
           <Text style={styles.emptyHistoryText}>
             Nenhuma detecção registrada ainda. Conecte-se para começar.
           </Text>
-        )}
+        )
+        }
+      </View>
+      {}
+      <View style={styles.card}>
+        <TouchableOpacity
+          style={[
+            s.audioAccessButton,
+            isSpeaking && s.audioAccessButtonActive
+          ]}
+          onPress={() => {
+            if (isSpeaking) {
+              stopSpeaking();
+            } else {
+              speakDetections();
+            }
+          }}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={isSpeaking ? "Parar leitura de objetos detectados" : "Ouvir objetos detectados"}
+          accessibilityHint="Toque para ouvir os objetos detectados pela câmera. Toque novamente para parar"
+        >
+          <View style={s.audioAccessContent}>
+            <Animated.View
+              style={[
+                s.audioAccessIconCircle,
+                isSpeaking && s.audioAccessIconCircleActive,
+                {
+                  transform: [{ scale: pulseAnim }],
+                }
+              ]}
+            >
+              <Ionicons 
+                name={isSpeaking ? "volume-mute" : "volume-high"} 
+                size={40} 
+                color="#FFFFFF"
+              />
+            </Animated.View>
+            
+            <View style={s.audioAccessTextContainer}>
+              <Text 
+                style={s.audioAccessTitle}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {isSpeaking ? 'Falando...' : 'Elementos Detectados'}
+              </Text>
+              <Text 
+                style={s.audioAccessSubtitle}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {isSpeaking ? 'Toque para parar' : 'Toque para ouvir'}
+              </Text>
+              {detections.length > 0 && !isSpeaking && (
+                <Text 
+                  style={s.audioAccessCount}
+                  numberOfLines={1}
+                >
+                  {detections.length} {detections.length === 1 ? 'detecção' : 'detecções'}
+                </Text>
+              )}
+            </View>
+            
+            <View style={s.audioAccessArrow}>
+              <Ionicons 
+                name="chevron-forward" 
+                size={28} 
+                color={isSpeaking ? "#FFFFFF" : "#22C55E"}
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {}
+        <TouchableOpacity
+          style={s.audioAccessSecondaryButton}
+          onPress={() => router.push('/(tabs)/history')}
+          accessibilityRole="button"
+          accessibilityLabel="Ver histórico completo"
+        >
+          <Text style={s.audioAccessSecondaryText}>
+            Ver histórico completo
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.card}>
