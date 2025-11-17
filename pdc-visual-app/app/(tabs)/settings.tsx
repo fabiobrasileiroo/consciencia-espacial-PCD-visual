@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl } from 'react-native';
-import { styles } from './styles';
+import { styles } from './_styles';
 import { useApp } from '@/contexts/AppContext';
 import { BluetoothService, BluetoothDevice } from '@/services/bluetooth-service';
 
