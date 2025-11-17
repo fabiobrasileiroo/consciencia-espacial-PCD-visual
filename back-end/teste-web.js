@@ -1539,6 +1539,59 @@ app.post('/api/esp32-cam/send-description', (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/esp32-cam/capture-now:
+ *   post:
+ *     summary: Solicita captura manual imediata da câmera
+ *     description: Envia sinal para o script Python capturar e processar uma imagem agora
+ *     tags: [ESP32-CAM]
+ *     responses:
+ *       200:
+ *         description: Sinal de captura enviado
+ */
+app.post('/api/esp32-cam/capture-now', (req, res) => {
+  // Apenas retorna OK - o script Python verifica periodicamente este endpoint
+  // ou podemos usar uma flag global
+  global.manualCaptureRequested = true;
+  global.manualCaptureTimestamp = Date.now();
+
+  console.log('📸 Captura manual solicitada via API');
+
+  res.json({
+    success: true,
+    message: 'Sinal de captura manual enviado',
+    timestamp: global.manualCaptureTimestamp
+  });
+});
+
+/**
+ * @swagger
+ * /api/esp32-cam/capture-status:
+ *   get:
+ *     summary: Verifica se há solicitação de captura manual pendente
+ *     description: Endpoint para o script Python verificar se deve capturar
+ *     tags: [ESP32-CAM]
+ *     responses:
+ *       200:
+ *         description: Status da captura manual
+ */
+app.get('/api/esp32-cam/capture-status', (req, res) => {
+  const shouldCapture = global.manualCaptureRequested || false;
+  const timestamp = global.manualCaptureTimestamp || 0;
+
+  // Reset da flag após consulta
+  if (shouldCapture) {
+    global.manualCaptureRequested = false;
+  }
+
+  res.json({
+    shouldCapture,
+    timestamp,
+    mode: operationMode
+  });
+});
+
 // ===== INICIALIZAÇÃO =====
 app.use(router);
 app.set('shutdown timeout', 1000);

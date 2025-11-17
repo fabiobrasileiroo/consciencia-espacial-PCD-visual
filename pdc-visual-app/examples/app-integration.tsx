@@ -115,7 +115,7 @@ export default function ExampleScreen() {
 
       <View style={styles.actions}>
         <Button title="Testar Som" onPress={testSound} />
-        <Button title="Limpar Histórico" onPress={clearHistory} color="red" />
+        <Button title="Limpar Histórico" style={{width: 120}} onPress={clearHistory} color="red" />
       </View>
 
       <View style={styles.historyContainer}>

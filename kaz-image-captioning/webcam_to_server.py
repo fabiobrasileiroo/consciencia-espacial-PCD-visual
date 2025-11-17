@@ -1,6 +1,6 @@
 """
-Script headless para capturar do ESP32-CAM e enviar detecções para o servidor
-Funciona sem interface gráfica - ideal para GitHub Codespaces
+Script headless para capturar da WEBCAM e enviar detecções para o servidor
+Versão adaptada do esp32_to_server.py para usar câmera do computador
 """
 import torch
 import torchvision
@@ -182,32 +182,24 @@ def get_operation_mode(base_url):
         server_base = base_url.rsplit('/api/', 1)[0]
         mode_url = f"{server_base}/api/operation-mode"
         
-        print(f"🔍 Consultando modo em: {mode_url}")  # DEBUG
         response = requests.get(mode_url, timeout=2)
         
         if response.status_code == 200:
             data = response.json()
-            print(f"📦 Resposta completa: {data}")  # DEBUG
             
             # Resposta tem estrutura: { state: { mode: "realtime" } }
             if 'state' in data and 'mode' in data['state']:
                 mode = data['state']['mode']
-                print(f"✅ Modo recebido do servidor: {mode}")  # DEBUG
                 return mode
             # Fallback: tentar pegar direto
             elif 'mode' in data:
                 mode = data['mode']
-                print(f"✅ Modo recebido (direto): {mode}")  # DEBUG
                 return mode
             else:
-                print(f"⚠️  Estrutura inesperada, usando modo padrão: realtime")
                 return 'realtime'
         else:
-            print(f"⚠️  Erro {response.status_code}, usando modo padrão: realtime")  # DEBUG
             return 'realtime'  # Padrão se falhar
     except Exception as e:
-        print(f"⚠️  Erro ao consultar modo: {e}")
-        print(f"⚠️  Usando modo padrão: realtime")  # DEBUG
         return 'realtime'  # Padrão se falhar
 
 def check_manual_capture_request(base_url):
@@ -223,7 +215,7 @@ def check_manual_capture_request(base_url):
             timestamp = data.get('timestamp', 0)
             
             if should_capture:
-                print(f"✅ Captura manual solicitada! Timestamp: {timestamp}")  # DEBUG
+                print(f"✅ Captura manual solicitada! Timestamp: {timestamp}")
             
             return should_capture, timestamp
         else:
@@ -231,20 +223,25 @@ def check_manual_capture_request(base_url):
     except Exception as e:
         return False, 0
 
-def main_loop(esp32_url, server_url, interval, rotate):
+def main_loop(camera_id, server_url, interval, rotate, show_preview):
     """Loop principal de captura e envio"""
-    print(f"\n🎥 Conectando ao ESP32-CAM: {esp32_url}")
+    print(f"\n📹 Conectando à webcam {camera_id}...")
     
-    cap = cv2.VideoCapture(esp32_url)
+    cap = cv2.VideoCapture(camera_id)
     
     if not cap.isOpened():
-        print("❌ Erro ao conectar ao stream!")
+        print("❌ Erro ao conectar à webcam!")
         print("\n💡 DICAS:")
-        print(f"  • Verifique se o ESP32-CAM está em: {esp32_url}")
-        print("  • Teste no navegador primeiro")
+        print(f"  • Verifique se a câmera {camera_id} existe")
+        print("  • Tente camera_id=0 (padrão) ou 1, 2...")
+        print("  • Verifique permissões da câmera")
         return
     
-    print("✅ Conectado ao stream!")
+    # Configurar resolução
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    
+    print("✅ Conectado à webcam!")
     print(f"📡 Servidor: {server_url}")
     
     rotation_map = {0: None, 90: cv2.ROTATE_90_CLOCKWISE, 
@@ -255,6 +252,10 @@ def main_loop(esp32_url, server_url, interval, rotate):
     
     print(f"\n🚀 Iniciando captura")
     print(f"⚙️  Modo: Controlado pelo servidor (realtime={interval}s / manual=sob demanda)")
+    if show_preview:
+        print("👁️  Preview: ATIVADO (pressione 'q' para sair)")
+    else:
+        print("👁️  Preview: DESATIVADO (headless mode)")
     print("Pressione Ctrl+C para parar\n")
     
     last_capture = 0
@@ -268,18 +269,36 @@ def main_loop(esp32_url, server_url, interval, rotate):
             frame_count += 1
             
             if not ret:
-                print("⚠️  Erro ao capturar frame, reconectando...")
-                cap.release()
-                sleep(1)
-                cap = cv2.VideoCapture(esp32_url)
-                if not cap.isOpened():
-                    print("❌ Não foi possível reconectar")
-                    break
+                print("⚠️  Erro ao capturar frame")
+                sleep(0.1)
                 continue
             
             # Aplicar rotação
             if rotate != 0 and rotation_map[rotate] is not None:
                 frame = cv2.rotate(frame, rotation_map[rotate])
+            
+            # Mostrar preview se ativado
+            if show_preview:
+                preview_frame = frame.copy()
+                
+                # Adicionar informações na tela
+                cv2.putText(preview_frame, f"Modo: {current_mode.upper()}", 
+                           (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(preview_frame, f"Frame: {frame_count}", 
+                           (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+                cv2.putText(preview_frame, f"Deteccoes: {detection_count}", 
+                           (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+                
+                if current_mode == 'manual':
+                    cv2.putText(preview_frame, "AGUARDANDO COMANDO...", 
+                               (10, 450), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 165, 255), 2)
+                
+                cv2.imshow('Webcam - Kaz Image Captioning', preview_frame)
+                
+                # Pressione 'q' para sair
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    print("\n👋 Fechando preview...")
+                    break
             
             current_time = time()
             
@@ -334,45 +353,54 @@ def main_loop(esp32_url, server_url, interval, rotate):
                 
                 print(f"✅ Detecção #{detection_count} processada")
             
-            # Pequeno delay para não sobrecarregar
-            sleep(0.1)
+            # Pequeno delay para não sobrecarregar (só se não tiver preview)
+            if not show_preview:
+                sleep(0.1)
             
     except KeyboardInterrupt:
         print("\n⚠️  Interrompido pelo usuário")
     except Exception as e:
         print(f"\n❌ Erro: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         cap.release()
+        if show_preview:
+            cv2.destroyAllWindows()
         print("\n✅ Recursos liberados")
 
 def main():
     """Função principal"""
-    parser = argparse.ArgumentParser(description='ESP32-CAM → Servidor (Headless)')
-    parser.add_argument('--esp32-url', type=str, required=True,
-                        help='URL do stream ESP32-CAM (ex: http://192.168.100.57:81/stream)')
+    parser = argparse.ArgumentParser(description='WEBCAM → Servidor (Headless/Preview)')
+    parser.add_argument('--camera-id', type=int, default=0,
+                        help='ID da câmera (default: 0 = webcam padrão)')
     parser.add_argument('--server-url', type=str, required=True,
-                        help='URL HTTP do servidor (ex: http://192.168.100.11:3000/api/esp32-cam/send-description)')
+                        help='URL HTTP do servidor (ex: http://localhost:3000/api/esp32-cam/send-description)')
     parser.add_argument('--interval', type=int, default=5,
                         help='Intervalo entre capturas em segundos (default: 5)')
     parser.add_argument('--rotate', type=int, default=0, choices=[0, 90, 180, 270],
                         help='Rotação da imagem em graus')
+    parser.add_argument('--show-preview', action='store_true',
+                        help='Mostrar janela de preview da webcam (desativa modo headless)')
     
     args = parser.parse_args()
     
     print("╔════════════════════════════════════════════════════════╗")
-    print("║  📷 ESP32-CAM → SERVIDOR (HTTP POST)                  ║")
+    print("║  📹 WEBCAM → SERVIDOR (HTTP POST)                     ║")
     print("╚════════════════════════════════════════════════════════╝")
-    print(f"ESP32-CAM: {args.esp32_url}")
+    print(f"Câmera ID: {args.camera_id}")
     print(f"Servidor: {args.server_url}")
     print(f"Intervalo: {args.interval}s")
+    print(f"Preview: {'✅ Ativo' if args.show_preview else '❌ Headless'}")
     print(f"Modelo IA: {'✅ Ativo' if model_available else '❌ Inativo'}")
     print("════════════════════════════════════════════════════════\n")
     
     main_loop(
-        args.esp32_url,
+        args.camera_id,
         args.server_url,
         args.interval,
-        args.rotate
+        args.rotate,
+        args.show_preview
     )
 
 if __name__ == "__main__":

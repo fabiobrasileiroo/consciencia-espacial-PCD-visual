@@ -4,8 +4,8 @@
 # Uso: ./run_headless.sh
 
 # Configurações
-ESP32_URL="http://192.168.100.57:81/stream"
-SERVER_URL="http://192.168.100.11:3000/api/esp32-cam/send-description"
+ESP32_URL="http://172.25.26.63:81/stream"
+SERVER_URL="http://localhost:3000/api/esp32-cam/send-description"
 INTERVAL=5  # segundos entre capturas
 
 echo "🚀 Iniciando ESP32-CAM → Servidor (HTTP POST)"
@@ -26,3 +26,13 @@ python3 esp32_to_server.py \
   --esp32-url "$ESP32_URL" \
   --server-url "$SERVER_URL" \
   --interval "$INTERVAL"
+
+
+
+# Pressione Ctrl+C no terminal Python
+
+cd kaz-image-captioning
+source venv/bin/activate
+python esp32_to_server.py \
+  --esp32-url http://172.25.26.65:81/stream \
+  --server-url http://localhost:3000/api/esp32-cam/send-description
