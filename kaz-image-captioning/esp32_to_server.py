@@ -14,10 +14,9 @@ from time import time, sleep
 import os
 import argparse
 from googletrans import Translator
-import asyncio
-import websockets
 import json
 from datetime import datetime
+import requests
 
 # ===== CONFIGURAÇÕES DO MODELO =====
 load_path = 'checkpoints/kaz_model.pth'
@@ -150,47 +149,33 @@ def generate_caption(img):
     
     return pred_kaz, pred_pt, objects
 
-async def send_to_server(websocket, description_kz, description_pt, objects, confidence):
-    """Envia detecção para o servidor via WebSocket"""
-    message = {
-        "type": "detection",
-        "description_kz": description_kz,
+def send_to_server(server_url, description_kz, description_pt, objects, confidence):
+    """Envia detecção para o servidor via HTTP POST"""
+    payload = {
         "description_pt": description_pt,
+        "description_kz": description_kz,
         "objects": objects,
-        "confidence": confidence,
-        "timestamp": int(time() * 1000)
+        "confidence": confidence
     }
     
     try:
-        await websocket.send(json.dumps(message))
-        print(f"📤 Enviado para servidor: {description_pt[:50]}...")
-        return True
+        response = requests.post(
+            server_url,
+            json=payload,
+            timeout=5
+        )
+        
+        if response.status_code == 200:
+            print(f"📤 ✅ Enviado: {description_pt[:50]}...")
+            return True
+        else:
+            print(f"❌ Erro {response.status_code}: {response.text}")
+            return False
     except Exception as e:
         print(f"❌ Erro ao enviar: {e}")
         return False
 
-async def identify_to_server(websocket):
-    """Identifica-se ao servidor"""
-    identify_msg = {
-        "type": "identify",
-        "deviceId": "ESP32-CAM-CODESPACE"
-    }
-    await websocket.send(json.dumps(identify_msg))
-    print("✅ Identificado ao servidor")
-
-async def send_heartbeat(websocket):
-    """Envia heartbeat periódico"""
-    while True:
-        try:
-            await websocket.send(json.dumps({
-                "type": "heartbeat",
-                "timestamp": int(time() * 1000)
-            }))
-            await asyncio.sleep(30)
-        except:
-            break
-
-async def main_loop(esp32_url, server_url, interval, rotate):
+def main_loop(esp32_url, server_url, interval, rotate):
     """Loop principal de captura e envio"""
     print(f"\n🎥 Conectando ao ESP32-CAM: {esp32_url}")
     
@@ -204,7 +189,7 @@ async def main_loop(esp32_url, server_url, interval, rotate):
         return
     
     print("✅ Conectado ao stream!")
-    print(f"\n📡 Conectando ao servidor: {server_url}")
+    print(f"📡 Servidor: {server_url}")
     
     rotation_map = {0: None, 90: cv2.ROTATE_90_CLOCKWISE, 
                     180: cv2.ROTATE_180, 270: cv2.ROTATE_90_COUNTERCLOCKWISE}
@@ -212,63 +197,56 @@ async def main_loop(esp32_url, server_url, interval, rotate):
     frame_count = 0
     detection_count = 0
     
+    print(f"\n🚀 Iniciando captura (intervalo: {interval}s)")
+    print("Pressione Ctrl+C para parar\n")
+    
+    last_capture = 0
+    
     try:
-        async with websockets.connect(server_url) as websocket:
-            print("✅ Conectado ao servidor!")
+        while True:
+            ret, frame = cap.read()
+            frame_count += 1
             
-            await identify_to_server(websocket)
+            if not ret:
+                print("⚠️  Erro ao capturar frame, reconectando...")
+                cap.release()
+                sleep(1)
+                cap = cv2.VideoCapture(esp32_url)
+                if not cap.isOpened():
+                    print("❌ Não foi possível reconectar")
+                    break
+                continue
             
-            # Iniciar heartbeat em background
-            asyncio.create_task(send_heartbeat(websocket))
+            # Aplicar rotação
+            if rotate != 0 and rotation_map[rotate] is not None:
+                frame = cv2.rotate(frame, rotation_map[rotate])
             
-            print(f"\n🚀 Iniciando captura (intervalo: {interval}s)")
-            print("Pressione Ctrl+C para parar\n")
+            # Capturar a cada X segundos
+            current_time = time()
+            if current_time - last_capture >= interval:
+                last_capture = current_time
+                detection_count += 1
+                
+                print(f"\n📸 Captura #{detection_count} (frame {frame_count})")
+                print(f"⏰ {datetime.now().strftime('%H:%M:%S')}")
+                
+                # Gerar legenda
+                caption_kz, caption_pt, objects = generate_caption(frame)
+                
+                # Enviar para servidor
+                send_to_server(
+                    server_url,
+                    caption_kz,
+                    caption_pt,
+                    objects,
+                    confidence=0.75
+                )
+                
+                print(f"✅ Detecção #{detection_count} processada")
             
-            last_capture = 0
+            # Pequeno delay para não sobrecarregar
+            sleep(0.1)
             
-            while True:
-                ret, frame = cap.read()
-                frame_count += 1
-                
-                if not ret:
-                    print("⚠️  Erro ao capturar frame, reconectando...")
-                    cap.release()
-                    cap = cv2.VideoCapture(esp32_url)
-                    if not cap.isOpened():
-                        print("❌ Não foi possível reconectar")
-                        break
-                    continue
-                
-                # Aplicar rotação
-                if rotate != 0 and rotation_map[rotate] is not None:
-                    frame = cv2.rotate(frame, rotation_map[rotate])
-                
-                # Capturar a cada X segundos
-                current_time = time()
-                if current_time - last_capture >= interval:
-                    last_capture = current_time
-                    detection_count += 1
-                    
-                    print(f"\n📸 Captura #{detection_count} (frame {frame_count})")
-                    print(f"⏰ {datetime.now().strftime('%H:%M:%S')}")
-                    
-                    # Gerar legenda
-                    caption_kz, caption_pt, objects = generate_caption(frame)
-                    
-                    # Enviar para servidor
-                    await send_to_server(
-                        websocket,
-                        caption_kz,
-                        caption_pt,
-                        objects,
-                        confidence=0.75
-                    )
-                    
-                    print(f"✅ Detecção #{detection_count} processada\n")
-                
-                # Pequeno delay para não sobrecarregar
-                await asyncio.sleep(0.1)
-                
     except KeyboardInterrupt:
         print("\n⚠️  Interrompido pelo usuário")
     except Exception as e:
@@ -281,9 +259,9 @@ def main():
     """Função principal"""
     parser = argparse.ArgumentParser(description='ESP32-CAM → Servidor (Headless)')
     parser.add_argument('--esp32-url', type=str, required=True,
-                        help='URL do stream ESP32-CAM (ex: http://192.168.100.57/stream)')
+                        help='URL do stream ESP32-CAM (ex: http://192.168.100.57:81/stream)')
     parser.add_argument('--server-url', type=str, required=True,
-                        help='URL WebSocket do servidor (ex: ws://localhost:3000/esp32-cam)')
+                        help='URL HTTP do servidor (ex: http://192.168.100.11:3000/api/esp32-cam/send-description)')
     parser.add_argument('--interval', type=int, default=5,
                         help='Intervalo entre capturas em segundos (default: 5)')
     parser.add_argument('--rotate', type=int, default=0, choices=[0, 90, 180, 270],
@@ -292,7 +270,7 @@ def main():
     args = parser.parse_args()
     
     print("╔════════════════════════════════════════════════════════╗")
-    print("║  📷 ESP32-CAM → SERVIDOR (HEADLESS)                   ║")
+    print("║  📷 ESP32-CAM → SERVIDOR (HTTP POST)                  ║")
     print("╚════════════════════════════════════════════════════════╝")
     print(f"ESP32-CAM: {args.esp32_url}")
     print(f"Servidor: {args.server_url}")
@@ -300,12 +278,12 @@ def main():
     print(f"Modelo IA: {'✅ Ativo' if model_available else '❌ Inativo'}")
     print("════════════════════════════════════════════════════════\n")
     
-    asyncio.run(main_loop(
+    main_loop(
         args.esp32_url,
         args.server_url,
         args.interval,
         args.rotate
-    ))
+    )
 
 if __name__ == "__main__":
     main()
