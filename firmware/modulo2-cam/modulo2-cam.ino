@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include "esp_camera.h"
 #include <WiFi.h>
 
@@ -126,6 +125,6 @@ void setup() {
 }
 
 void loop() {
-  // Loop vazio - servidor HTTP roda em background
+  // Do nothing. Everything is done in another task by the web server
   delay(10000);
 }
