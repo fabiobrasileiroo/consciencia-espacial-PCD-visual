@@ -295,24 +295,46 @@
 #define PCLK_GPIO_NUM  3
 
 #elif defined(CAMERA_MODEL_ESP32S3_EYE)
-#define PWDN_GPIO_NUM  -1
-#define RESET_GPIO_NUM -1
-#define XCLK_GPIO_NUM  15
-#define SIOD_GPIO_NUM  4
-#define SIOC_GPIO_NUM  5
 
-#define Y2_GPIO_NUM 11
-#define Y3_GPIO_NUM 9
-#define Y4_GPIO_NUM 8
-#define Y5_GPIO_NUM 10
-#define Y6_GPIO_NUM 12
-#define Y7_GPIO_NUM 18
-#define Y8_GPIO_NUM 17
-#define Y9_GPIO_NUM 16
+// Ajustado para o layout do módulo GOOUUU ESP32-S3-CAM (OV2640)
+#define PWDN_GPIO_NUM  -1   // power down (não usado)
+#define RESET_GPIO_NUM -1   // reset (não usado)
+#define XCLK_GPIO_NUM  15   // XCLK para sensor
+#define SIOD_GPIO_NUM  4    // SCCB SDA
+#define SIOC_GPIO_NUM  5    // SCCB SCL
+
+// Data pins (Y2..Y9) — mapeamento conforme serigrafia da placa
+#define Y2_GPIO_NUM  11
+#define Y3_GPIO_NUM  9
+#define Y4_GPIO_NUM  8
+#define Y5_GPIO_NUM  10
+#define Y6_GPIO_NUM  12
+#define Y7_GPIO_NUM  18
+#define Y8_GPIO_NUM  17
+#define Y9_GPIO_NUM  16
 
 #define VSYNC_GPIO_NUM 6
 #define HREF_GPIO_NUM  7
 #define PCLK_GPIO_NUM  13
+
+// #define PWDN_GPIO_NUM  -1
+// #define RESET_GPIO_NUM -1
+// #define XCLK_GPIO_NUM  15
+// #define SIOD_GPIO_NUM  4
+// #define SIOC_GPIO_NUM  5
+
+// #define Y2_GPIO_NUM 11
+// #define Y3_GPIO_NUM 9
+// #define Y4_GPIO_NUM 8
+// #define Y5_GPIO_NUM 10
+// #define Y6_GPIO_NUM 12
+// #define Y7_GPIO_NUM 18
+// #define Y8_GPIO_NUM 17
+// #define Y9_GPIO_NUM 16
+
+// #define VSYNC_GPIO_NUM 6
+// #define HREF_GPIO_NUM  7
+// #define PCLK_GPIO_NUM  13
 
 #elif defined(CAMERA_MODEL_DFRobot_FireBeetle2_ESP32S3) || defined(CAMERA_MODEL_DFRobot_Romeo_ESP32S3)
 #define PWDN_GPIO_NUM  -1
