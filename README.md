@@ -11,6 +11,8 @@
 =======
 <img width="1500" height="1125" alt="iPhone 16" src="https://github.com/user-attachments/assets/fdac1e1a-cae8-4143-9a42-3346d0985ab8" />
 <img width="1463" height="1139" alt="Diagrama visual" src="https://github.com/user-attachments/assets/d0dd161d-42b6-439d-b030-470a401e6ada" />
+<img width="1463" height="1139" alt="Modelo final" src="https://github.com/user-attachments/assets/2ea72638-870b-4a42-bdfb-4647e74f978e" />
+
 
 > Sistema de assistência para detecção de obstáculos usando ESP32, ESP-NOW, sensor HC-SR04 e feedback tátil.
 
