@@ -32,3 +32,15 @@ Thumbs.db
 *.bak
 *.old
 *~
+## Docs / change management - ignore scripts and temporary files but allow generated Excel
+docs/change-management/*.py
+docs/change-management/*.cfg
+docs/change-management/*.sh
+docs/change-management/*.txt
+docs/change-management/*.csv
+docs/change-management/pyvenv.cfg
+docs/change-management/.venv/
+
+## Keep generated prefilled Excel files and change log in repo
+!docs/change-management/*_preenchido.xlsx
+!docs/change-management/change_log.xlsx

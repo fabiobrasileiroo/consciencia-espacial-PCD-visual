@@ -29,5 +29,13 @@ Liste também todos os detalhes relevantes para sua configuração de teste. -->
 - [ ] Fiz alterações correspondentes na documentação
 - [ ] Minhas alterações não geram novos `warnings`
 - [ ] O título do meu PR está seguindo o padrão <type>(scope): subject.
+  ## Risco da mudança ⚠️
+  - [ ] baixo
+  - [ ] médio
+  - [ ] alto
+
+  ## Rollback / Plano de Mitigação
+  Descreva como reverter essa alteração em caso de problemas (git revert hash, redeploy antigo, flash firmware anterior, etc.)
+
   - Exemplo 1 (com escopo): feat(page): add collaborators page
   - Exemplo 2 (sem escopo): fix: prevent auto reload

@@ -1,2 +1,0 @@
-# Ignore npm lockfile so EAS uses pnpm-lock.yaml
-package-lock.json
