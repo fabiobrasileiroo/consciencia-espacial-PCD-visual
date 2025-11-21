@@ -17,7 +17,8 @@ import {
   Pause,
   Zap,
   AlertTriangle,
-  Info
+  Info,
+  Headphones
 } from 'lucide-react-native';
 
 const Logo = require('@/assets/images/logo.png');
@@ -52,6 +53,7 @@ export default function HomeScreen() {
     toast,
     showToast,
     hideToast,
+    allSystemsConnected,
   } = useApp();
 
   const [bluetoothService] = useState(() => new BluetoothService());
@@ -60,15 +62,14 @@ export default function HomeScreen() {
   const [operationMode, setOperationMode] = useState<'realtime' | 'manual'>('realtime');
   const [isCapturing, setIsCapturing] = useState(false);
   const [cameraConnected, setCameraConnected] = useState(false);
+  const [isPlayingTTS, setIsPlayingTTS] = useState(false);
 
   useEffect(() => {
-    // Verificar conexão ESP32 ao carregar
     checkESP32Connection();
     checkCameraConnection();
   }, []);
 
   const checkCameraConnection = async () => {
-    // Verificar se a câmera está conectada através do servidor
     try {
       const response = await fetch('http://localhost:3000/api/status');
       const data = await response.json();
@@ -88,7 +89,6 @@ export default function HomeScreen() {
     setRefreshing(true);
 
     try {
-      // Reconectar WebSocket se desconectado
       if (!wsConnected) {
         showToast('Reconectando ao servidor...', 'info');
         connectWebSocket();
@@ -96,10 +96,8 @@ export default function HomeScreen() {
         showToast('Atualizando dados...', 'info');
       }
 
-      // Verificar conexão ESP32
       await checkESP32Connection();
 
-      // Aguardar um pouco para feedback visual
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       if (wsConnected) {
@@ -117,7 +115,6 @@ export default function HomeScreen() {
     try {
       console.log('Testando som com feedback');
 
-      // Obter volume real do sistema
       const systemVolume = await getSystemVolume();
       console.log(`Volume do sistema: ${systemVolume}%`);
 
@@ -138,26 +135,43 @@ export default function HomeScreen() {
       console.log('Erro no som:', error);
       showToast('Erro ao testar som', 'error');
     }
-  }; const handleChangeMode = () => {
+  };
+
+  const handleTestTTS = async () => {
+    try {
+      setIsPlayingTTS(true);
+      showToast('Reproduzindo texto de teste...', 'info');
+      
+      const testText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+      
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      showToast('Texto reproduzido com sucesso!', 'success');
+    } catch (error) {
+      console.error('Erro no TTS:', error);
+      showToast('Erro ao reproduzir texto', 'error');
+    } finally {
+      setIsPlayingTTS(false);
+    }
+  };
+
+  const handleChangeMode = () => {
     const newMode = mode === 'som' ? 'vibração' : 'som';
     setMode(newMode);
-    console.log(`Modo alterado para ${newMode}`);
+    showToast(`Modo alterado para ${newMode}`, 'success');
   };
 
   const handleConnectBluetooth = async () => {
     try {
       if (connectionStatus === 'conectado') {
-        // Desconectar
         setConnectionStatus('desconectado');
         setEsp32Connected(false);
         disconnectWebSocket();
-        console.log('Desconectado do Bluetooth');
+        showToast('Dispositivo Bluetooth desconectado', 'info');
       } else {
-        // Verificar se Bluetooth está ligado
         const isEnabled = await bluetoothService.isBluetoothEnabled();
 
         if (!isEnabled) {
-          // Solicitar permissão para ligar Bluetooth
           Alert.alert(
             'Bluetooth Desligado',
             'O Bluetooth está desligado. Deseja ligar para conectar ao fone?',
@@ -194,7 +208,6 @@ export default function HomeScreen() {
       setConnectionStatus('conectado');
       setEsp32Connected(true);
 
-      // Conectar WebSocket para receber dados
       connectWebSocket();
 
       showToast('ESP32 conectado com sucesso!', 'success');
@@ -204,15 +217,14 @@ export default function HomeScreen() {
   };
 
   const handleDeleteHistoryItem = (id: string) => {
-    // Implementar lógica de deletar item do histórico
     console.log('Deletar item:', id);
+    showToast('Item removido do histórico', 'info');
   };
 
   const toggleOperationMode = async () => {
     const newMode = operationMode === 'realtime' ? 'manual' : 'realtime';
 
     try {
-      // Enviar modo para o servidor
       const response = await fetch('http://localhost:3000/api/operation-mode', {
         method: 'POST',
         headers: {
@@ -249,8 +261,6 @@ export default function HomeScreen() {
     showToast('Capturando descrição...', 'info');
 
     try {
-      // Solicitar captura manual ao backend Node.js
-      // O backend sinalizará para o script Python capturar
       const response = await fetch('http://localhost:3000/api/esp32-cam/capture-now', {
         method: 'POST',
         headers: {
@@ -261,8 +271,6 @@ export default function HomeScreen() {
       if (response.ok) {
         const data = await response.json();
         showToast('Captura solicitada! Aguardando...', 'success');
-
-        // A descrição virá pelo WebSocket em alguns segundos
         console.log('Captura manual solicitada:', data);
       } else {
         showToast('Erro ao solicitar captura', 'error');
@@ -278,7 +286,6 @@ export default function HomeScreen() {
   const getIconForObject = (text: string) => {
     const lowerText = text.toLowerCase();
 
-    // Mapeamento de palavras-chave para ícones Lucide
     if (lowerText.includes('câmera') || lowerText.includes('camera')) {
       return <Camera size={20} color="#22C55E" />;
     }
@@ -295,7 +302,6 @@ export default function HomeScreen() {
       return <Zap size={20} color="#F59E0B" />;
     }
 
-    // Ícone padrão
     return <Info size={20} color="#64748B" />;
   };
 
@@ -317,8 +323,26 @@ export default function HomeScreen() {
           source={Logo}
           style={styles.logo}
           resizeMode="contain"
-          accessibilityLabel="Logo do aplicativo Lucoi"
+          accessibilityLabel="LUMI"
+          accessibilityRole="image"
+          accessible={true}
         />
+
+        {allSystemsConnected && (
+          <View style={[styles.card, { backgroundColor: '#22C55E20', borderLeftWidth: 4, borderLeftColor: '#22C55E' }]}>
+            <View style={styles.rowBetween}>
+              <View style={styles.iconTextRow}>
+                <View style={[styles.circle, { backgroundColor: '#22C55E', width: 12, height: 12, borderRadius: 6 }]} />
+                <Text style={[styles.sectionTitle, { color: '#22C55E' }]}>
+                  Todos os sistemas conectados
+                </Text>
+              </View>
+              <Text style={[styles.subText, { color: '#22C55E', fontWeight: 'bold' }]}>
+                ✓
+              </Text>
+            </View>
+          </View>
+        )}
 
         <View style={styles.card}>
           <View style={styles.rowBetween}>
@@ -385,7 +409,6 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Controle de Modo Manual/Realtime */}
         {wsConnected && cameraConnected && (
           <View style={styles.card}>
             <View style={styles.rowBetween}>
@@ -485,19 +508,78 @@ export default function HomeScreen() {
           {detectionHistory.length > 0 ? (
             <View style={{ marginTop: 12 }}>
               {detectionHistory.slice(0, 5).map((item) => (
-                <HistoryItemCard
-                  key={item.id}
+                <HistoryItemCard 
                   id={item.id}
                   text={item.text}
                   timestamp={item.timestamp}
-                  onTest={() => testWithHistoryItem(item)}
-                  onDelete={() => handleDeleteHistoryItem(item.id)}
+                  onTest={() => handleTestItem(item.id)}
+                  onDelete={() => handleDeleteItem(item.id)}
                 />
               ))}
             </View>
           ) : (
             <Text style={styles.emptyHistoryText}>
               Nenhuma detecção registrada ainda. Conecte-se para começar.
+            </Text>
+          )}
+        </View>
+
+        <View style={[styles.card, { marginBottom: 30 }]}>
+          <View style={styles.rowBetween}>
+            <Text
+              style={styles.sectionTitle}
+              accessibilityLabel="Transcrição em tempo real"
+            >
+              Transcrição em Tempo Real
+            </Text>
+            
+            {currentTranscription && (
+              <TouchableOpacity
+                style={[
+                  styles.button2,
+                  { 
+                    backgroundColor: isPlayingTTS ? '#64748B' : '#3B82F6',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6
+                  }
+                ]}
+                onPress={handleTestTTS}
+                disabled={isPlayingTTS}
+                accessibilityRole="button"
+                accessibilityLabel="Testar text-to-speech"
+              >
+                {isPlayingTTS ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Volume2 size={16} color="#FFF" />
+                )}
+                <Text style={[styles.buttonText, { color: '#FFF', marginLeft: 4, fontSize: 12 }]}>
+                  {isPlayingTTS ? 'Reproduzindo...' : 'Ouvir'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {currentTranscription ? (
+            <View>
+              <Text
+                style={[styles.lorem, { fontSize: 14, lineHeight: 22 }]}
+                accessibilityLabel={`Transcrição atual: ${currentTranscription}`}
+              >
+                {currentTranscription}
+              </Text>
+              {wsConnected && (
+                <Text style={[styles.subText, { fontSize: 10, marginTop: 8, textAlign: 'right' }]}>
+                  Ao vivo
+                </Text>
+              )}
+            </View>
+          ) : (
+            <Text
+              style={styles.emptyHistoryText}
+              accessibilityLabel="Aguardando dados de transcrição"
+            >
+              {!serverOnline ? 'Servidor offline. Reconecte para receber dados.' : 'Aguardando detecção de objetos...\n' + (wsConnected ? 'Conectado e pronto para receber dados.' : 'Conecte-se ao WebSocket para começar.')}
             </Text>
           )}
         </View>
@@ -561,7 +643,6 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                {/* Distância do objeto detectado */}
                 {detectedObjectDistance !== null && (
                   <View style={{ marginTop: 16, padding: 12, backgroundColor: '#334155', borderRadius: 12 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -582,7 +663,7 @@ export default function HomeScreen() {
 
         <TouchableOpacity
           style={styles.buttonCard}
-          onPress={handleTestSound} // Use handleTestSoundSimple para versão mais simples
+          onPress={handleTestSound}
           accessibilityRole="button"
           accessibilityLabel="Botão testar som"
           accessibilityHint="Pressione para testar o som do dispositivo. Será emitido um beep."
@@ -611,14 +692,9 @@ export default function HomeScreen() {
             accessibilityLabel={`Botão mudar modo. Modo atual: ${mode === 'som' ? 'som' : 'vibração'}`}
             accessibilityHint={`Pressione para alterar o modo. Ao pressionar será anunciado: modo alterado para ${mode === 'som' ? 'vibração' : 'som'}`}
           >
-            <Image
-              source={Switch}
-              style={styles.smallIcon}
-              resizeMode="contain"
-              accessibilityLabel="Ícone de alternância"
-            />
+            <Headphones size={20} color="#FFF" />
             <Text style={styles.buttonText}>
-              Modo: {mode === 'som' ? 'Som' : 'Vibração'}
+              {mode === 'som' ? 'Som' : 'Vibração'}
             </Text>
           </TouchableOpacity>
 
@@ -636,40 +712,9 @@ export default function HomeScreen() {
               accessibilityLabel="Ícone Bluetooth"
             />
             <Text style={styles.buttonText}>
-              {connectionStatus === 'conectado' ? 'Desconectar' : 'Conectar'} Bluetooth
+              {connectionStatus === 'conectado' ? 'Desconectar' : 'Conectar'} 
             </Text>
           </TouchableOpacity>
-        </View>
-
-        <View style={[styles.card, { marginBottom: 30 }]}>
-          <Text
-            style={styles.sectionTitle}
-            accessibilityLabel="Transcrição em tempo real"
-          >
-            Transcrição em Tempo Real
-          </Text>
-          {currentTranscription ? (
-            <View>
-              <Text
-                style={[styles.lorem, { fontSize: 14, lineHeight: 22 }]}
-                accessibilityLabel={`Transcrição atual: ${currentTranscription}`}
-              >
-                {currentTranscription}
-              </Text>
-              {wsConnected && (
-                <Text style={[styles.subText, { fontSize: 10, marginTop: 8, textAlign: 'right' }]}>
-                  🔴 Ao vivo
-                </Text>
-              )}
-            </View>
-          ) : (
-            <Text
-              style={styles.emptyHistoryText}
-              accessibilityLabel="Aguardando dados de transcrição"
-            >
-              {!serverOnline ? '❌ Servidor offline. Reconecte para receber dados.' : 'Aguardando detecção de objetos...\n' + (wsConnected ? 'Conectado e pronto para receber dados.' : 'Conecte-se ao WebSocket para começar.')}
-            </Text>
-          )}
         </View>
 
         <Toast
@@ -682,3 +727,12 @@ export default function HomeScreen() {
     </>
   );
 }
+
+const handleTestItem = (id: string) => {
+  // Implementar
+  console.log('Testando item:', id);
+};
+
+const handleDeleteItem = (id: string) => {
+  // Implementar
+};

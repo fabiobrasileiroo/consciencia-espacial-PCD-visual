@@ -58,6 +58,7 @@ interface ToastConfig {
 }
 
 interface AppContextType {
+  allSystemsConnected: boolean;
   mode: string;
   setMode: (mode: string) => void;
   connectionStatus: string;
@@ -391,6 +392,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   };
 
   const value = {
+    allSystemsConnected: false,
     mode,
     setMode,
     connectionStatus,

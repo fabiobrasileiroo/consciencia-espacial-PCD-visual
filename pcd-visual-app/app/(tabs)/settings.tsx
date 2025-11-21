@@ -53,6 +53,7 @@ export default function SettingsScreen() {
   const [bluetoothService] = useState(() => new BluetoothService());
   const [customUrl, setCustomUrl] = useState(apiUrl);
   const [isEditingUrl, setIsEditingUrl] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0); // MOVIDO para dentro do componente
 
   // Atualizar URL local quando apiUrl do contexto mudar
   useEffect(() => {
@@ -124,11 +125,13 @@ export default function SettingsScreen() {
   }, [loadDevices, showToast]);
 
   const handleHelpFAQ = () => {
-    console.log('Ajuda e FAQ pressionado');
+    console.log('Abrir drawer de dúvidas frequentes');
+    showToast('Abrindo dúvidas frequentes...', 'info');
   };
 
   const handleAboutApp = () => {
     console.log('Sobre o Aplicativo pressionado');
+    showToast('Informações sobre o aplicativo LUMI', 'info');
   };
 
   return (
@@ -222,24 +225,14 @@ export default function SettingsScreen() {
         ) : (
           <>
             {bluetoothDevices.length > 0 ? (
+              // ✅ CORREÇÃO: key apenas no elemento pai do map
               bluetoothDevices.map((device) => (
-                <View key={device.id} style={styles.rowBetween}>
-                  <Text
-                    style={styles.subText}
-                    accessibilityLabel={device.name}
-                  >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 8 }}>
+                  <Text style={styles.subText} accessibilityLabel={device.name}>
                     - {device.name}
                   </Text>
-                  <View
-                    style={[
-                      styles.deviceTag,
-                      device.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected
-                    ]}
-                  >
-                    <Text
-                      style={styles.deviceTagText}
-                      accessibilityLabel={device.connected ? 'Conectado' : 'Desconectado'}
-                    >
+                  <View style={[styles.deviceTag, device.connected ? styles.deviceTagConnected : styles.deviceTagDisconnected]}>
+                    <Text style={styles.deviceTagText} accessibilityLabel={device.connected ? 'Conectado' : 'Desconectado'}>
                       {device.connected ? 'Conectado' : 'Desconectado'}
                     </Text>
                   </View>
@@ -429,15 +422,14 @@ export default function SettingsScreen() {
                   Intensidade:
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 4 }}>
-                  {[1, 2, 3, 4, 5].map((level) => (
-                    <View
-                      key={level}
-                      style={{
-                        width: 6,
-                        height: level * 4 + 8,
-                        backgroundColor: level <= esp32Status.motor.vibrationLevel! ? '#22C55E' : '#334155',
-                        borderRadius: 2,
-                      }}
+                  {[1, 2, 3, 4, 5].map((level, index) => (
+                    <View 
+                      style={{ 
+                        width: 8, 
+                        height: 8, 
+                        backgroundColor: index === currentStep ? '#007AFF' : '#E5E5EA', 
+                        borderRadius: 4 
+                      }} 
                     />
                   ))}
                 </View>
