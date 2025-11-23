@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.fabiobrasileiro.lumi"
     },
     "android": {
-      "package": "com.fabiobrasileiro.lumi"
+      "package": "com.fabiobrasileiro.lumi",
+      "usesCleartextTraffic": true
     },
     "web": {
       "bundler": "metro"

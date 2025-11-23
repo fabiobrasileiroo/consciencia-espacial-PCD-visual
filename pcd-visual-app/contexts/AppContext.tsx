@@ -214,7 +214,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     connect: connectWebSocket,
     disconnect: disconnectWebSocket,
   } = useWebSocket({
-    url: process.env.EXPO_PUBLIC_WS_URL || 'ws://localhost:3000/ws',
+    // WebSocket URL derived from current apiUrl so it follows runtime changes
+    url: (process.env.EXPO_PUBLIC_WS_URL || apiUrl.replace(/^http/, 'ws') + '/ws'),
     autoConnect: true, // Conectar automaticamente
   });
 
