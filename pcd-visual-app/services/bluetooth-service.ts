@@ -45,7 +45,7 @@ export class BluetoothService implements IBluetoothService {
       this.BleManager = require('react-native-ble-manager');
       if (this.BleManager && typeof this.BleManager.start === 'function') {
         // inicializa sem alertas caso esteja disponível
-        this.BleManager.start({ showAlert: false }).catch(() => {});
+        this.BleManager.start({ showAlert: false }).catch(() => { });
       }
     } catch (e) {
       this.BleManager = null;
