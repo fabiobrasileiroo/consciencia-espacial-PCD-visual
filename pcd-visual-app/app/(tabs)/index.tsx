@@ -21,6 +21,7 @@ import {
   Info,
   Headphones
 } from 'lucide-react-native';
+import { Ruler } from 'lucide-react-native';
 
 const Logo = require('@/assets/images/logo.png');
 const Glasses = require('@/assets/images/glasses.png');
@@ -386,6 +387,25 @@ export default function HomeScreen() {
     };
   }, [apiUrl, vibrationLevel]);
 
+  // determine intensity to decide colors (prefer vibrationLevel from sensor poll; fallback to distance thresholds)
+  const getIntensity = () => {
+    if (vibrationLevel) return vibrationLevel;
+    if (typeof detectedObjectDistance === 'number') {
+      if (detectedObjectDistance <= 20) return 'danger';
+      if (detectedObjectDistance <= 50) return 'warning';
+      return 'safe';
+    }
+    return 'safe';
+  };
+
+  const intensity = getIntensity();
+  const intensityColorMap: Record<string, string> = {
+    danger: '#EF4444',
+    warning: '#F59E0B',
+    safe: '#22C55E'
+  };
+  const intensityColor = intensityColorMap[intensity] || '#22C55E';
+
   return (
     <>
       <ScrollView
@@ -452,7 +472,7 @@ export default function HomeScreen() {
           </View>
 
           {wsConnected && (
-            <View style={styles.rowBetween}>
+            <View style={[styles.rowBetween, { marginLeft: 2 }]}>
               <View style={styles.iconTextRow}>
                 {serverOnline ? (
                   <Wifi size={20} color="#22C55E" />
@@ -727,11 +747,11 @@ export default function HomeScreen() {
                 {detectedObjectDistance !== null && (
                   <View style={{ marginTop: 16, padding: 12, backgroundColor: '#334155', borderRadius: 12 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 24, marginRight: 8 }}>📏</Text>
+                      <Ruler size={24} color={intensityColor} style={{ marginRight: 8 }} />
                       <Text style={[styles.subText, { fontSize: 14, fontWeight: '600' }]}>
                         Objeto à frente:
                       </Text>
-                      <Text style={[styles.subText, { fontSize: 16, fontWeight: 'bold', marginLeft: 8, color: '#22C55E' }]}>
+                      <Text style={[styles.subText, { fontSize: 16, fontWeight: 'bold', marginLeft: 8, color: intensityColor }]}>
                         {detectedObjectDistance}cm
                       </Text>
                     </View>
