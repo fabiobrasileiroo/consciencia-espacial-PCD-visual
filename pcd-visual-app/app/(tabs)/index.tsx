@@ -398,7 +398,7 @@ export default function HomeScreen() {
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: connectionStatus === 'conectado' ? '#22C55E' : '#64748B'
+                    backgroundColor: connectionStatus === 'conectado' ? '#22C55E' : '#a90000ff'
                   }
                 ]} />
                 <Text style={styles.connectedText}>

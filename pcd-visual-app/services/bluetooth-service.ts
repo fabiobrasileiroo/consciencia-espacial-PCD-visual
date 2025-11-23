@@ -1,4 +1,4 @@
-import { Platform, Alert, Linking } from 'react-native';
+import { Platform, Alert, Linking, NativeModules } from 'react-native';
 
 export interface BluetoothDevice {
   id: string;
@@ -24,40 +24,97 @@ export class BluetoothService implements IBluetoothService {
   private connectedToESP32 = false;
   private connectedDevices: BluetoothDevice[] = [];
 
+  // Optional native modules (loaded dynamically if installed)
+  private InCallManager: any = null;
+  private BleManager: any = null;
+  private BluetoothClassic: any = null;
+
+  constructor() {
+    // tentar carregar módulos nativos se estiverem instalados
+    try {
+      // react-native-incall-manager (audio route)
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      this.InCallManager = require('react-native-incall-manager');
+    } catch (e) {
+      this.InCallManager = null;
+    }
+
+    try {
+      // react-native-ble-manager (BLE)
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      this.BleManager = require('react-native-ble-manager');
+      if (this.BleManager && typeof this.BleManager.start === 'function') {
+        // inicializa sem alertas caso esteja disponível
+        this.BleManager.start({ showAlert: false }).catch(() => {});
+      }
+    } catch (e) {
+      this.BleManager = null;
+    }
+
+    try {
+      // react-native-bluetooth-classic (Android classic)
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      this.BluetoothClassic = require('react-native-bluetooth-classic');
+    } catch (e) {
+      this.BluetoothClassic = null;
+    }
+  }
   async getConnectedDevices(): Promise<BluetoothDevice[]> {
     try {
-      // Em produção, você usaria react-native-ble-manager ou similar
-      // Por enquanto, retornamos devices mockados baseados no estado real
-
       const devices: BluetoothDevice[] = [];
 
-      // Verificar dispositivos de áudio conectados
-      // Nota: Isso requer módulos nativos específicos
-      // Por enquanto, mockamos baseado em padrões comuns
+      // 1) Detectar rota de áudio (fones conectados) usando InCallManager, se disponível
+      try {
+        if (this.InCallManager && typeof this.InCallManager.getAudioRoute === 'function') {
+          const route = await this.InCallManager.getAudioRoute();
+          // route example: 'BLUETOOTH', 'SPEAKER', 'EARPIECE'
+          if (route && String(route).toLowerCase().includes('bluetooth')) {
+            devices.push({ id: 'system-audio', name: 'Dispositivo de Áudio (sistema)', connected: true, type: 'audio' });
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
 
-      // Dispositivo principal de óculos (representa ESP32 + servidor OK)
-      devices.push({
-        id: 'esp32-1',
-        name: 'LUMI - SmartGlasses v1.0',
-        connected: this.connectedToESP32,
-        type: 'esp32',
-      });
+      // 2) Detectar periféricos BLE conectados (ex.: ESP32 anunciando um service UUID)
+      try {
+        if (this.BleManager && typeof this.BleManager.getConnectedPeripherals === 'function') {
+          // se a aplicação souber service UUIDs, deveria passá-los aqui.
+          // Chamamos sem services como tentativa - algumas implementações aceitam lista vazia.
+          let connected: any[] = [];
+          try {
+            connected = await this.BleManager.getConnectedPeripherals([]);
+          } catch (err) {
+            // algumas versões exigem serviceUUIDs; tentar fallback para scan + check
+            connected = [];
+          }
 
-      // Fones de ouvido Bluetooth (sempre listados, conexão controlada em outra tela)
-      devices.push({
-        id: 'airpods-1',
-        name: 'Apple - Airpods v1.0',
-        connected: false,
-        type: 'audio',
-      });
+          connected.forEach(p => {
+            devices.push({ id: p.id || p.deviceId || p.uuid, name: p.name || 'BLE Device', connected: true, type: 'esp32' });
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
 
-      // Pulseira / acessório complementar
-      devices.push({
-        id: 'bracelet-1',
-        name: 'LUMI - SmartBracelet v1.0',
-        connected: false,
-        type: 'other',
-      });
+      // 3) Android classic (pareados/conectados)
+      try {
+        if (Platform.OS === 'android' && this.BluetoothClassic && typeof this.BluetoothClassic.list === 'function') {
+          const bonded: any[] = await this.BluetoothClassic.list();
+          bonded.forEach(b => {
+            devices.push({ id: b.id || b.address, name: b.name || 'Paired Device', connected: !!b.connected, type: 'other' });
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // Se não encontramos nenhum device via APIs nativas, manter parte do fallback mock para UX
+      if (devices.length === 0) {
+        devices.push({ id: 'esp32-1', name: 'LUMI - SmartGlasses v1.0', connected: this.connectedToESP32, type: 'esp32' });
+        devices.push({ id: 'airpods-1', name: 'Apple - Airpods v1.0', connected: false, type: 'audio' });
+        devices.push({ id: 'bracelet-1', name: 'LUMI - SmartBracelet v1.0', connected: false, type: 'other' });
+      }
 
       this.connectedDevices = devices;
       return devices;

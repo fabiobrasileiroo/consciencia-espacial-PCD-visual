@@ -15,6 +15,10 @@ import {
   Thermometer,
   Droplets,
   Signal,
+  RefreshCw,
+  Wifi,
+  MapPin,
+  Edit2,
   CheckCircle,
   XCircle,
   AlertCircle,
@@ -134,6 +138,10 @@ export default function SettingsScreen() {
     showToast('Informações sobre o aplicativo LUMI', 'info');
   };
 
+  // Dropdown state for Support sections
+  const [expandedFAQ, setExpandedFAQ] = useState(false);
+  const [expandedAbout, setExpandedAbout] = useState(false);
+
   return (
     <ScrollView
       style={styles.container}
@@ -250,14 +258,16 @@ export default function SettingsScreen() {
               accessibilityRole="button"
               accessibilityLabel="Atualizar lista de dispositivos"
             >
-              <Text style={styles.buttonText}>🔄 Atualizar Dispositivos</Text>
+              <RefreshCw color="#FFFFFF" size={16} style={{ marginRight: 8 }} />
+              <Text style={styles.buttonText}>Atualizar Dispositivos</Text>
             </TouchableOpacity>
 
             {serverOnline && (
               <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#334155' }}>
-                <Text style={[styles.sectionTitle, { fontSize: 14, marginBottom: 12 }]}>
-                  📡 Conexões Ativas
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <Wifi color="#22C55E" size={16} style={{ marginRight: 8 }} />
+                  <Text style={[styles.sectionTitle, { fontSize: 14 }]}>Conexões Ativas</Text>
+                </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 8 }}>
                   <View style={{ alignItems: 'center' }}>
                     <View style={{ backgroundColor: connectedDevices.app > 0 ? '#22C55E20' : '#64748B20', padding: 12, borderRadius: 12, marginBottom: 6 }}>
@@ -356,7 +366,7 @@ export default function SettingsScreen() {
                 {typeof esp32Status.sensor.distance === 'number' && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                     <Text style={[styles.subText, { fontSize: 11, flex: 1 }]}>
-                      📍 Distância: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.distance}cm</Text>
+                      <MapPin color="#94A3B8" size={12} style={{ marginRight: 6 }} /> Distância: <Text style={{ fontWeight: 'bold' }}>{esp32Status.sensor.distance}cm</Text>
                     </Text>
                     <View style={{
                       backgroundColor: esp32Status.sensor.level === 'danger' ? '#EF4444' : esp32Status.sensor.level === 'warning' ? '#F59E0B' : '#22C55E',
@@ -423,13 +433,13 @@ export default function SettingsScreen() {
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 4 }}>
                   {[1, 2, 3, 4, 5].map((level, index) => (
-                    <View 
-                      style={{ 
-                        width: 8, 
-                        height: 8, 
-                        backgroundColor: index === currentStep ? '#007AFF' : '#E5E5EA', 
-                        borderRadius: 4 
-                      }} 
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        backgroundColor: index === currentStep ? '#007AFF' : '#E5E5EA',
+                        borderRadius: 4
+                      }}
                     />
                   ))}
                 </View>
@@ -481,7 +491,8 @@ export default function SettingsScreen() {
               accessibilityRole="button"
               accessibilityLabel="Editar URL da API"
             >
-              <Text style={styles.buttonText}>✏️ Alterar URL</Text>
+              <Edit2 color="#FFFFFF" size={16} style={{ marginRight: 8 }} />
+              <Text style={styles.buttonText}>Alterar URL</Text>
             </TouchableOpacity>
           ) : (
             <View>
@@ -754,11 +765,17 @@ export default function SettingsScreen() {
         >
           Suporte e Informações
         </Text>
+
+        {/* FAQ dropdown */}
         <TouchableOpacity
           style={styles.iconTextRow}
-          onPress={handleHelpFAQ}
-          accessibilityRole="link"
-          accessibilityLabel="Link Ajuda e FAQ"
+          onPress={() => {
+            setExpandedFAQ(!expandedFAQ);
+            handleHelpFAQ();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir Ajuda e FAQ"
+          accessibilityState={{ expanded: expandedFAQ }}
         >
           <Image
             source={Info}
@@ -768,11 +785,34 @@ export default function SettingsScreen() {
           />
           <Text style={styles.subText}>Ajuda e FAQ</Text>
         </TouchableOpacity>
+
+        {expandedFAQ && (
+          <View style={{ paddingLeft: 40, paddingTop: 8, paddingBottom: 8 }}>
+            <Text style={[styles.subText, { fontSize: 13, opacity: 0.9 }]}>
+              Perguntas frequentes:
+            </Text>
+            <Text style={[styles.subText, { fontSize: 12, opacity: 0.8, marginTop: 6 }]}>
+              • Como conectar um dispositivo Bluetooth: Vá em Dispositivos Bluetooth e pressione Atualizar.
+            </Text>
+            <Text style={[styles.subText, { fontSize: 12, opacity: 0.8, marginTop: 4 }]}>
+              • Como reconectar ao servidor: Use o botão Reconectar no cartão Servidor.
+            </Text>
+            <Text style={[styles.subText, { fontSize: 12, opacity: 0.8, marginTop: 8 }]}>
+              Contato do suporte: suporte@lumi.example
+            </Text>
+          </View>
+        )}
+
+        {/* About dropdown */}
         <TouchableOpacity
-          style={styles.iconTextRow}
-          onPress={handleAboutApp}
-          accessibilityRole="link"
-          accessibilityLabel="Opção Sobre o Aplicativo"
+          style={[styles.iconTextRow, { marginTop: 8 }]}
+          onPress={() => {
+            setExpandedAbout(!expandedAbout);
+            handleAboutApp();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir Sobre o Aplicativo"
+          accessibilityState={{ expanded: expandedAbout }}
         >
           <Image
             source={Info}
@@ -780,8 +820,17 @@ export default function SettingsScreen() {
             resizeMode="contain"
             accessibilityLabel="Ícone de informação"
           />
-          <Text style={styles.subText}>Sobre o Aplicativo          </Text>
+          <Text style={styles.subText}>Sobre o Aplicativo</Text>
         </TouchableOpacity>
+
+        {expandedAbout && (
+          <View style={{ paddingLeft: 40, paddingTop: 8, paddingBottom: 8 }}>
+            <Text style={[styles.subText, { fontSize: 13, opacity: 0.9 }]}>LUMI — Aplicativo de Apoio</Text>
+            <Text style={[styles.subText, { fontSize: 12, opacity: 0.8, marginTop: 6 }]}>Versão: 1.0.0</Text>
+            <Text style={[styles.subText, { fontSize: 12, opacity: 0.8, marginTop: 4 }]}>Build: main</Text>
+            <Text style={[styles.subText, { fontSize: 12, opacity: 0.8, marginTop: 8 }]}>Desenvolvido pela equipe Consciencia Espacial.</Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );

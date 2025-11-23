@@ -5,7 +5,7 @@ import tensorflow as tf
 import time
 import os
 
-URL = 'http://192.168.0.139:81/stream'
+URL = 'http://192.168.100.57:81/stream'
 
 TFLITE_MODEL = 'tflite_learn_810340_10.tflite'
 tflite_interpreter = tf.lite.Interpreter(model_path=TFLITE_MODEL)
