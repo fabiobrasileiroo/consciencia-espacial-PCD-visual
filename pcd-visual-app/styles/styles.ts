@@ -56,11 +56,14 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 17,
     alignItems: 'center',
+    alignContent: 'center',
     marginVertical: 8,
+    marginBottom: 8,
   },
   iconTextRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignContent: 'center',
     gap: 12,
     flex: 1,
   },
@@ -68,7 +71,8 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 15,
+    marginTop: 20,
+    marginBottom: 30,
   },
   horizontalCardsContainer: {
     flexDirection: 'row',
@@ -80,10 +84,12 @@ export const styles = StyleSheet.create({
   largeIcon: {
     width: 38,
     height: 38,
+    alignSelf: 'center',
   },
   smallIcon: {
     width: 22,
     height: 22,
+    alignSelf: 'center',
   },
   circle: {
     width: 15,
@@ -138,7 +144,7 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 18,
-    marginBottom: 12,
+    marginBottom: 0,
   },
   buttonText: {
     color: '#fff',
@@ -264,6 +270,7 @@ export const styles = StyleSheet.create({
   deviceTagText: {
     color: '#fff',
     fontSize: 12,
+    textAlign: 'center',
     fontWeight: '600',
   },
 });

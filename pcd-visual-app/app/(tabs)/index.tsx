@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image, Alert, RefreshControl, ActivityIndicator } from 'react-native';
 import { styles } from '../../styles/styles';
 import { useApp } from '@/contexts/AppContext';
 import { Audio } from 'expo-av';
 import { BluetoothService } from '@/services/bluetooth-service';
+import { hapticsService } from '@/services/service-provider';
 import { HistoryItemCard } from '@/components/history-item-card';
 import { Toast } from '@/components/toast';
 import { SkeletonCard, SkeletonStats } from '@/components/skeleton-loader';
@@ -54,6 +55,7 @@ export default function HomeScreen() {
     showToast,
     hideToast,
     allSystemsConnected,
+    apiUrl,
   } = useApp();
 
   const [bluetoothService] = useState(() => new BluetoothService());
@@ -63,6 +65,8 @@ export default function HomeScreen() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [cameraConnected, setCameraConnected] = useState(false);
   const [isPlayingTTS, setIsPlayingTTS] = useState(false);
+  const vibrationIntervalRef = useRef<number | null>(null);
+  const [vibrationLevel, setVibrationLevel] = useState<'danger' | 'warning' | 'safe' | null>(null);
 
   useEffect(() => {
     checkESP32Connection();
@@ -71,7 +75,8 @@ export default function HomeScreen() {
 
   const checkCameraConnection = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/status');
+      const respUrl = `${apiUrl.replace(/\/+$/, '')}/api/status`;
+      const response = await fetch(respUrl);
       const data = await response.json();
       setCameraConnected(data.esp32Status?.camera?.connected || false);
     } catch (error) {
@@ -141,11 +146,11 @@ export default function HomeScreen() {
     try {
       setIsPlayingTTS(true);
       showToast('Reproduzindo texto de teste...', 'info');
-      
+
       const testText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
-      
+
       await new Promise(resolve => setTimeout(resolve, 3000));
-      
+
       showToast('Texto reproduzido com sucesso!', 'success');
     } catch (error) {
       console.error('Erro no TTS:', error);
@@ -225,7 +230,8 @@ export default function HomeScreen() {
     const newMode = operationMode === 'realtime' ? 'manual' : 'realtime';
 
     try {
-      const response = await fetch('http://localhost:3000/api/operation-mode', {
+      const respUrl = `${apiUrl.replace(/\/+$/, '')}/api/operation-mode`;
+      const response = await fetch(respUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -261,7 +267,8 @@ export default function HomeScreen() {
     showToast('Capturando descrição...', 'info');
 
     try {
-      const response = await fetch('http://localhost:3000/api/esp32-cam/capture-now', {
+      const respUrl = `${apiUrl.replace(/\/+$/, '')}/api/esp32-cam/capture-now`;
+      const response = await fetch(respUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -304,6 +311,80 @@ export default function HomeScreen() {
 
     return <Info size={20} color="#64748B" />;
   };
+
+  // --- Vibration controller: poll API status and trigger continuous haptics when needed ---
+  const startVibrationForLevel = (level: 'danger' | 'warning') => {
+    // stop existing
+    if (vibrationIntervalRef.current) {
+      clearInterval(vibrationIntervalRef.current);
+      vibrationIntervalRef.current = null;
+    }
+
+    let intervalMs = 900;
+    let impactStyle: 'light' | 'medium' | 'heavy' = 'medium';
+
+    if (level === 'danger') {
+      intervalMs = 400;
+      impactStyle = 'heavy';
+    } else if (level === 'warning') {
+      intervalMs = 900;
+      impactStyle = 'medium';
+    }
+
+    // start repeating impacts
+    vibrationIntervalRef.current = setInterval(() => {
+      // fire and forget
+      hapticsService.impact(impactStyle).catch(() => { });
+    }, intervalMs) as unknown as number;
+  };
+
+  const stopVibration = () => {
+    if (vibrationIntervalRef.current) {
+      clearInterval(vibrationIntervalRef.current);
+      vibrationIntervalRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    // polling to get faster updates than waiting for WS/SSE
+    const pollInterval = 1500;
+    const runPoll = async () => {
+      try {
+        const respUrl = `${apiUrl.replace(/\/+$/, '')}/api/status`;
+        const res = await fetch(respUrl);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+
+        const level = data?.esp32Status?.sensor?.level || 'safe';
+
+        if (level !== vibrationLevel) {
+          // update state and (re)configure vibration
+          if (level === 'danger' || level === 'warning') {
+            setVibrationLevel(level);
+            startVibrationForLevel(level);
+          } else {
+            setVibrationLevel('safe');
+            stopVibration();
+          }
+        }
+      } catch (e) {
+        // ignore polling errors
+      }
+    };
+
+    const id = setInterval(runPoll, pollInterval) as unknown as number;
+    // run once immediately
+    runPoll();
+
+    return () => {
+      mounted = false;
+      clearInterval(id as unknown as number);
+      stopVibration();
+    };
+  }, [apiUrl, vibrationLevel]);
 
   return (
     <>
@@ -398,7 +479,7 @@ export default function HomeScreen() {
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: connectionStatus === 'conectado' ? '#22C55E' : '#a90000ff'
+                    backgroundColor: connectionStatus === 'conectado' ? '#ffffffff' : '#ffffffff'
                   }
                 ]} />
                 <Text style={styles.connectedText}>
@@ -508,7 +589,7 @@ export default function HomeScreen() {
           {detectionHistory.length > 0 ? (
             <View style={{ marginTop: 12 }}>
               {detectionHistory.slice(0, 5).map((item) => (
-                <HistoryItemCard 
+                <HistoryItemCard
                   id={item.id}
                   text={item.text}
                   timestamp={item.timestamp}
@@ -532,12 +613,12 @@ export default function HomeScreen() {
             >
               Transcrição em Tempo Real
             </Text>
-            
+
             {currentTranscription && (
               <TouchableOpacity
                 style={[
                   styles.button2,
-                  { 
+                  {
                     backgroundColor: isPlayingTTS ? '#64748B' : '#3B82F6',
                     paddingHorizontal: 12,
                     paddingVertical: 6
@@ -559,7 +640,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )}
           </View>
-          
+
           {currentTranscription ? (
             <View>
               <Text
@@ -587,7 +668,7 @@ export default function HomeScreen() {
         {wsConnected && serverOnline && (
           <View style={styles.card}>
             <Text
-              style={styles.sectionTitle}
+              style={[styles.sectionTitle, { marginBottom: 20 }]}
               accessibilityLabel="Estatísticas"
             >
               Estatísticas
@@ -606,9 +687,9 @@ export default function HomeScreen() {
                     />
                     <Text
                       style={styles.subCardText}
-                      accessibilityLabel={`Temperatura: ${stats.temperature} graus Celsius`}
+                      accessibilityLabel={`Temperatura: ${typeof stats.temperature === 'number' ? stats.temperature.toFixed(1) : stats.temperature} graus Celsius`}
                     >
-                      {stats.temperature}°C
+                      {typeof stats.temperature === 'number' ? stats.temperature.toFixed(1) : stats.temperature}°C
                     </Text>
                   </View>
 
@@ -676,7 +757,7 @@ export default function HomeScreen() {
                 resizeMode="contain"
                 accessibilityLabel="Ícone de som"
               />
-              <Text style={styles.buttonText}>Testar som</Text>
+              <Text style={styles.buttonText}>Som</Text>
             </View>
             <View style={styles.sliderContainer}>
               <View style={[styles.slider, { width: `${volume}%` }]} />
@@ -712,7 +793,7 @@ export default function HomeScreen() {
               accessibilityLabel="Ícone Bluetooth"
             />
             <Text style={styles.buttonText}>
-              {connectionStatus === 'conectado' ? 'Desconectar' : 'Conectar'} 
+              {connectionStatus === 'conectado' ? 'Desconectar' : 'Conectar'}
             </Text>
           </TouchableOpacity>
         </View>

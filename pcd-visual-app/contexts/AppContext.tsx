@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { Platform } from 'react-native';
+import { bluetoothService } from '@/services/service-provider';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { ttsService, hapticsService } from '@/services/service-provider';
 import { StorageService } from '@/services/storage-service';
@@ -148,6 +150,25 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     loadCustomApiUrl();
   }, []);
 
+  // Tentar solicitar permissões Bluetooth automaticamente ao iniciar o app no Android
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    // chama o request sem bloquear a UI; se já concedido, retorna rapidamente
+    (async () => {
+      try {
+        const granted = await bluetoothService.requestBluetoothPermission();
+        if (granted) {
+          console.log('Permissões Bluetooth concedidas automaticamente ao iniciar.');
+        } else {
+          console.log('Permissões Bluetooth não concedidas ao iniciar.');
+        }
+      } catch (err) {
+        console.warn('Erro ao tentar solicitar permissões Bluetooth automaticamente:', err);
+      }
+    })();
+  }, []);
+
   // Função para salvar URL customizada
   const setApiUrl = async (url: string) => {
     try {
@@ -170,14 +191,35 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // Controle de volume do sistema
   const setSystemVolume = async (newVolume: number) => {
     try {
-      // No React Native, você precisaria de um módulo nativo ou expo-av
-      // Por enquanto, apenas atualizamos o estado local
-      setVolume(newVolume);
-      console.log(`Volume do sistema ajustado para: ${newVolume}%`);
+      // Tenta usar um módulo nativo opcional para alterar o volume do sistema.
+      // Ex.: react-native-system-setting (requer prebuild / native install).
+      let systemModule: any = null;
+      try {
+        // carregamento dinâmico: se não instalado, não quebra o app
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        systemModule = require('react-native-system-setting');
+      } catch (err) {
+        systemModule = null;
+      }
 
-      // TODO: Implementar controle real do volume usando:
-      // import { Audio } from 'expo-av';
-      // await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+      if (systemModule && typeof systemModule.setVolume === 'function') {
+        // setVolume espera valor entre 0 e 1
+        const vol = Math.max(0, Math.min(1, newVolume / 100));
+        try {
+          await systemModule.setVolume(vol, { type: 'music' });
+          // Atualiza também o estado local
+          setVolume(newVolume);
+          console.log(`Volume do sistema ajustado para: ${newVolume}% (via react-native-system-setting)`);
+          return;
+        } catch (err) {
+          console.warn('Falha ao ajustar volume via módulo nativo:', err);
+        }
+      }
+
+      // Fallback: atualizar apenas estado local e mostrar aviso ao usuário
+      setVolume(newVolume);
+      console.log(`Volume do sistema (apenas estado local) ajustado para: ${newVolume}%`);
+      showToast('Controle de volume real não disponível. Instale react-native-system-setting para controlar o volume do dispositivo.', 'warning');
     } catch (error) {
       console.error('Erro ao ajustar volume do sistema:', error);
     }
@@ -185,7 +227,18 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   const getSystemVolume = async (): Promise<number> => {
     try {
-      // TODO: Implementar leitura real do volume do sistema
+      // Tenta ler volume do sistema via módulo nativo opcional
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const SystemSetting = require('react-native-system-setting');
+        if (SystemSetting && typeof SystemSetting.getVolume === 'function') {
+          const v = await SystemSetting.getVolume(); // devolve 0..1
+          return Math.round((v || 0) * 100);
+        }
+      } catch (err) {
+        // módulo não disponível ou erro - fallback
+      }
+
       return volume;
     } catch (error) {
       console.error('Erro ao obter volume do sistema:', error);

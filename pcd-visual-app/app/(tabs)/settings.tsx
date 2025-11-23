@@ -329,7 +329,7 @@ export default function SettingsScreen() {
                 ]}
               >
                 <Text style={styles.deviceTagText}>
-                  {esp32Status.pai.connected ? '● Conectado' : '○ Offline'}
+                  {esp32Status.pai.connected ? 'Conectado' : 'Offline'}
                 </Text>
               </View>
             </View>
@@ -357,7 +357,7 @@ export default function SettingsScreen() {
                 ]}
               >
                 <Text style={styles.deviceTagText}>
-                  {esp32Status.sensor.connected ? '● Conectado' : '○ Offline'}
+                  {esp32Status.sensor.connected ? 'Conectado' : 'Offline'}
                 </Text>
               </View>
             </View>
@@ -422,7 +422,7 @@ export default function SettingsScreen() {
                 ]}
               >
                 <Text style={styles.deviceTagText}>
-                  {esp32Status.motor.connected ? '● Conectado' : '○ Offline'}
+                  {esp32Status.motor.connected ? 'Conectado' : 'Offline'}
                 </Text>
               </View>
             </View>
@@ -464,7 +464,7 @@ export default function SettingsScreen() {
                 ]}
               >
                 <Text style={styles.deviceTagText}>
-                  {esp32Status.camera.connected ? '● Conectado' : '○ Offline'}
+                  {esp32Status.camera.connected ? 'Conectado' : 'Offline'}
                 </Text>
               </View>
             </View>
@@ -758,9 +758,9 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      <View style={[styles.card, { marginBottom: 30 }]}>
+      <View style={[styles.card, { marginBottom: 30, gap: 8 }]}>
         <Text
-          style={styles.sectionTitle}
+          style={[styles.sectionTitle, { marginBottom: 20 }]}
           accessibilityLabel="Suporte e Informações"
         >
           Suporte e Informações

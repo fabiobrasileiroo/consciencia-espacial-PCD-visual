@@ -1,4 +1,4 @@
-import { Platform, Alert, Linking, NativeModules } from 'react-native';
+import { Platform, Alert, Linking, NativeModules, PermissionsAndroid } from 'react-native';
 
 export interface BluetoothDevice {
   id: string;
@@ -168,48 +168,50 @@ export class BluetoothService implements IBluetoothService {
   async requestBluetoothPermission(): Promise<boolean> {
     try {
       if (Platform.OS === 'android') {
-        // No Android, solicitar permissões de Bluetooth
-        Alert.alert(
-          'Permissão Bluetooth',
-          'Este app precisa de permissão para acessar o Bluetooth e conectar ao fone.',
-          [
-            {
-              text: 'Cancelar',
-              style: 'cancel',
-              onPress: () => false,
-            },
-            {
-              text: 'Permitir',
-              onPress: async () => {
-                // Aqui você implementaria a solicitação real de permissão
-                // usando expo-permissions ou react-native-permissions
-                await Linking.openSettings();
-                return true;
-              },
-            },
-          ]
-        );
+        // Primeiro mostramos um alerta explicativo (opcional)
+        const ok = await new Promise<boolean>(resolve => {
+          Alert.alert(
+            'Permissão Bluetooth',
+            'Este app precisa de permissão para acessar o Bluetooth e localizar dispositivos. Deseja permitir?',
+            [
+              { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Permitir', onPress: () => resolve(true) },
+            ],
+            { cancelable: true }
+          );
+        });
+
+        if (!ok) return false;
+
+        // Solicitar permissões relevantes no Android (inclui Android 12+)
+        const perms: string[] = [];
+        // BLUETOOTH_CONNECT / BLUETOOTH_SCAN podem não existir em versões antigas do RN/Android SDK,
+        // mas incluímos as constantes do PermissionsAndroid (se disponíveis) via string literal fallback.
+        perms.push(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+        perms.push('android.permission.BLUETOOTH_CONNECT');
+        perms.push('android.permission.BLUETOOTH_SCAN');
+
+        const granted = await PermissionsAndroid.requestMultiple(perms as any);
+
+        // granted é um objeto { permissionName: 'granted' | 'denied' | 'never_ask_again' }
+        const all = Object.values(granted).every(v => v === PermissionsAndroid.RESULTS.GRANTED);
+        return all;
       } else if (Platform.OS === 'ios') {
-        // No iOS, solicitar permissões de Bluetooth
-        Alert.alert(
-          'Permissão Bluetooth',
-          'Este app precisa de permissão para acessar o Bluetooth e conectar ao fone.',
-          [
-            {
-              text: 'Cancelar',
-              style: 'cancel',
-              onPress: () => false,
-            },
-            {
-              text: 'Configurações',
-              onPress: async () => {
-                await Linking.openSettings();
-                return true;
-              },
-            },
-          ]
-        );
+        // No iOS, normalmente apenas apontamos o usuário para as Configurações se necessário
+        const res = await new Promise<boolean>(resolve => {
+          Alert.alert(
+            'Permissão Bluetooth',
+            'Este app precisa de permissão para acessar o Bluetooth. Abra as configurações para conceder.',
+            [
+              { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Abrir Configurações', onPress: async () => { await Linking.openSettings(); resolve(true); } },
+            ],
+            { cancelable: true }
+          );
+        });
+        return res;
       }
+
       return true;
     } catch (error) {
       console.error('Erro ao solicitar permissão Bluetooth:', error);
