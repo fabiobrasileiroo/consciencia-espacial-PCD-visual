@@ -1,0 +1,1 @@
+python3 launcher.py --source webcam --mode both --auto --interval 3

@@ -613,6 +613,8 @@ export default function HomeScreen() {
                   id={item.id}
                   text={item.text}
                   timestamp={item.timestamp}
+                  objects={item.objects}
+                  confidence={item.confidence}
                   onTest={() => handleTestItem(item.id)}
                   onDelete={() => handleDeleteItem(item.id)}
                 />

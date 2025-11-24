@@ -12,6 +12,8 @@ interface DetectionHistory {
   id: string;
   text: string;
   timestamp: string;
+  objects?: string[];
+  confidence?: number;
 }
 
 interface Stats {
@@ -375,6 +377,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           id: (data.timestamp || Date.now()).toString(),
           text: data.description || 'Objeto detectado',
           timestamp: new Date(data.timestamp || Date.now()).toISOString(),
+          objects: data.objects,
+          confidence: data.confidence,
         };
 
         setDetectionHistory(prev => [newItem, ...prev].slice(0, 50));

@@ -7,12 +7,14 @@ interface HistoryItemCardProps {
   id: string;
   text: string;
   timestamp: string;
+  objects?: string[];
+  confidence?: number;
   onPress?: () => void;
   onDelete?: () => void;
   onTest?: () => void;
 }
 
-export function HistoryItemCard({ text, timestamp, onPress, onDelete, onTest }: HistoryItemCardProps) {
+export function HistoryItemCard({ text, timestamp, objects, confidence, onPress, onDelete, onTest }: HistoryItemCardProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -39,11 +41,38 @@ export function HistoryItemCard({ text, timestamp, onPress, onDelete, onTest }: 
           <Text style={[styles.text, isDark && styles.textDark]} numberOfLines={2}>
             {text}
           </Text>
+
+          {/* Objetos detectados */}
+          {objects && objects.length > 0 && (
+            <View style={styles.objectsContainer}>
+              {objects.slice(0, 5).map((obj, index) => (
+                <View key={index} style={[styles.objectTag, isDark && styles.objectTagDark]}>
+                  <Text style={[styles.objectText, isDark && styles.objectTextDark]}>
+                    {obj}
+                  </Text>
+                </View>
+              ))}
+              {objects.length > 5 && (
+                <Text style={[styles.moreObjects, isDark && styles.textSecondaryDark]}>
+                  +{objects.length - 5}
+                </Text>
+              )}
+            </View>
+          )}
+
           <View style={styles.footer}>
             <IconSymbol name="clock" size={14} color="#999" />
             <Text style={[styles.time, isDark && styles.textSecondaryDark]}>
               {formatTime(timestamp)}
             </Text>
+            {confidence && (
+              <>
+                <Text style={[styles.separator, isDark && styles.textSecondaryDark]}>•</Text>
+                <Text style={[styles.confidence, isDark && styles.textSecondaryDark]}>
+                  {(confidence * 100).toFixed(0)}%
+                </Text>
+              </>
+            )}
           </View>
         </View>
 
@@ -115,6 +144,47 @@ const styles = StyleSheet.create({
   },
   textSecondaryDark: {
     color: '#999',
+  },
+  objectsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginVertical: 8,
+  },
+  objectTag: {
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2196F3',
+  },
+  objectTagDark: {
+    backgroundColor: '#1a3a52',
+    borderColor: '#2196F3',
+  },
+  objectText: {
+    fontSize: 12,
+    color: '#2196F3',
+    fontWeight: '600',
+  },
+  objectTextDark: {
+    color: '#64B5F6',
+  },
+  moreObjects: {
+    fontSize: 12,
+    color: '#999',
+    alignSelf: 'center',
+  },
+  separator: {
+    fontSize: 12,
+    color: '#999',
+    marginHorizontal: 4,
+  },
+  confidence: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
