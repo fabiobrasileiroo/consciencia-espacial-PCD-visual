@@ -89,6 +89,26 @@ ls -lh checkpoints/kaz_model.pth
 
 ---
 
+## ⚡ Instalador automático (Linux / macOS / PowerShell Windows)
+
+Colocamos um script de instalação para facilitar. Ele cria a `.venv`, instala dependências e verifica o modelo.
+
+Linux / macOS:
+
+```bash
+bash install.sh --cpu    # Instala versão CPU de torch/tensorflow automaticamente
+```
+
+Windows (PowerShell):
+
+```powershell
+.\install.ps1 -CPU
+```
+
+> Observação: Para instalar com suporte a GPU (CUDA) use o assistente oficial do PyTorch/TensorFlow (siga os links no README) — evita incompatibilidades.
+
+---
+
 ## 🧪 Testes
 
 ### Teste 1: Webcam com Legendas em Kazakh

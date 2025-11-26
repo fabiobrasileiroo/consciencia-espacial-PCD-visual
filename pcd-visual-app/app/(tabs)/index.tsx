@@ -265,7 +265,6 @@ export default function HomeScreen() {
     }
 
     setIsCapturing(true);
-    showToast('Capturando descrição...', 'info');
 
     try {
       const respUrl = `${apiUrl.replace(/\/+$/, '')}/api/esp32-cam/capture-now`;
@@ -278,7 +277,6 @@ export default function HomeScreen() {
 
       if (response.ok) {
         const data = await response.json();
-        showToast('Captura solicitada! Aguardando...', 'success');
         console.log('Captura manual solicitada:', data);
       } else {
         showToast('Erro ao solicitar captura', 'error');

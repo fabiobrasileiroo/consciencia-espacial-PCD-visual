@@ -381,6 +381,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           confidence: data.confidence,
         };
 
+        // Apenas adiciona ao histórico e atualiza transcrição (sem toast para evitar "spam")
         setDetectionHistory(prev => [newItem, ...prev].slice(0, 50));
         setCurrentTranscription(newItem.text);
 
@@ -389,17 +390,15 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           setDetectedObjectDistance(data.distance);
         }
 
-        // Falar a descrição
+        // Falar a descrição da nova detecção
         ttsService.speak(newItem.text).catch(err => {
           console.error('Erro no TTS:', err);
         });
 
-        // Vibração básica em qualquer detecção
+        // Vibração básica em qualquer detecção (sem toast/scroll)
         hapticsService.impact('medium').catch(err => {
           console.error('Erro no haptics:', err);
         });
-
-        showToast(`Detectado: ${newItem.text}`, 'info');
         return;
       }
 

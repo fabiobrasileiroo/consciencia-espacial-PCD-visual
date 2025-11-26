@@ -79,6 +79,124 @@ source venv/bin/activate
 python3 test_webcam.py
 ```
 
+---
+
+## 🖥️ Windows & Linux - Passo a Passo (Detalhado)
+
+Essas instruções cobrem os passos mínimos para configurar e executar o sistema em **Windows** (PowerShell ou CMD) e **Linux (bash)**. Elas assumem que você já possui Python 3.12+ instalado.
+
+### 1) Preparar o projeto
+
+```bash
+# Clone ou copie o repositório
+cd /path/to/consciencia-espacial-PCD-visual/kaz-image-captioning
+```
+
+### 2) Criar e ativar ambiente virtual
+
+Linux (bash):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser  # se necessário no PowerShell
+.\.venv\Scripts\Activate.ps1
+```
+
+Windows (CMD):
+
+```cmd
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+> Observação: O `launcher.py` detecta automaticamente `.venv` e `venv`, mas recomendamos usar `.venv` para consistência com este guia.
+
+### 3) Instalar dependências
+
+Linux / Windows (após ativar `.venv`):
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+# Instalar pacotes pesados (PyTorch/TensorFlow) explicitamente, dependendo do suporte da sua GPU
+# PyTorch (CPU-only):
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# Se tiver NVIDIA GPU, siga as instruções oficiais: https://pytorch.org/get-started/locally/
+# TensorFlow (CPU):
+pip install tensorflow
+```
+
+Se ocorrerem problemas: no Windows, instale os **Visual C++ Build Tools**; no Linux, instale `build-essential` e `python3-dev`.
+
+### 4) Baixar o modelo e vocabulário
+
+1. Baixe o checkpoint do modelo e coloque em `checkpoints/kaz_model.pth` (link no topo do README).
+2. Verifique `vocabulary/` contém `vocab_kz.pickle` e `vocab_en.pickle` (geralmente já estão no repositório).
+
+```bash
+ls -la checkpoints/ vocabulary/
+```
+
+### 5) Teste básico (Webcam)
+
+Linux:
+
+```bash
+source .venv/bin/activate
+python3 launcher.py --source webcam --mode both --auto --interval 3
+```
+
+Windows (PowerShell):
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python launcher.py --source webcam --mode both --auto --interval 3
+```
+
+Windows (CMD):
+
+```cmd
+.venv\Scripts\activate
+python launcher.py --source webcam --mode both --auto --interval 3
+```
+
+### 6) Usar ESP32-CAM (exemplo)
+
+```bash
+python3 launcher.py --source esp32 --url http://192.168.x.x:81/stream --mode both --auto --interval 3
+```
+
+> Nota: o `launcher.py` foi criado para evitar problemas com PATH (por exemplo quando `/usr/bin` não está no PATH). Ele detecta automaticamente `.venv` ou `venv` na pasta do projeto e usa o Python do venv para executar o script. Se você ativar o venv manualmente, pode chamar o `src/unified_camera_detection.py` diretamente com `python src/unified_camera_detection.py ...`, mas usar `launcher.py` é mais resiliente.
+
+### 7) Executando em headless (sem UI)
+
+Se você quiser rodar sem interface OpenCV (por exemplo em servidor/headless), use:
+
+```bash
+python3 launcher.py --source webcam --mode both --auto --interval 3 --headless
+```
+
+### 8) Debug / Troubleshooting Rápido
+
+- `ModuleNotFoundError: No module named 'torch'` — Ative `.venv` e rode `pip install torch torchvision` (verifique versão e CPU/GPU).
+- `ModuleNotFoundError: No module named 'tensorflow'` — `pip install tensorflow`.
+- `FileNotFoundError` ao abrir `vocabulary/vocab_*.pickle` — verifique o `BASE_DIR` e se os arquivos existem.
+- `EADDRINUSE: address already in use :::3000` — o servidor Node.js (back-end) já está rodando na porta 3000; pare-o ou altere porta.
+- `python3: command not found` — use o Python correto para seu sistema (`python` no Windows/ `python3` em Linux) ou corrija PATH.
+- Se o `launcher.py` não encontrar venv, verifique se há `.venv` ou `venv` no diretório com `ls -la`.
+
+### 9) Observações finais
+
+- O modelo principal foi treinado em **Kazakh**. Use `test_webcam_translated.py` para obter tradução automática (KZ → EN → PT) se necessário.
+- Para produção, considere converter o modelo para TensorRT (se tiver GPU NVIDIA) para reduzir latência.
+
 ### ESP32-CAM Streaming
 
 ```bash
