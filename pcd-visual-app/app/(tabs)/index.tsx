@@ -57,6 +57,9 @@ export default function HomeScreen() {
     hideToast,
     allSystemsConnected,
     apiUrl,
+    speakOnlyInManual,
+    serverOperationMode,
+    speakText,
   } = useApp();
 
   const [bluetoothService] = useState(() => new BluetoothService());
@@ -225,6 +228,19 @@ export default function HomeScreen() {
   const handleDeleteHistoryItem = (id: string) => {
     console.log('Deletar item:', id);
     showToast('Item removido do histórico', 'info');
+  };
+
+  const handleTestItem = async (id: string) => {
+    const item = detectionHistory.find(i => i.id === id);
+    if (!item) return;
+    testWithHistoryItem(item);
+  };
+
+  const handleReplayItem = async (id: string) => {
+    const item = detectionHistory.find(i => i.id === id);
+    if (!item) return;
+    // use AppContext speakText to respect settings
+    await speakText(item.text);
   };
 
   const toggleOperationMode = async () => {
@@ -614,7 +630,8 @@ export default function HomeScreen() {
                   objects={item.objects}
                   confidence={item.confidence}
                   onTest={() => handleTestItem(item.id)}
-                  onDelete={() => handleDeleteItem(item.id)}
+                  onReplay={() => handleReplayItem(item.id)}
+                  onDelete={() => handleDeleteHistoryItem(item.id)}
                 />
               ))}
             </View>
@@ -829,11 +846,4 @@ export default function HomeScreen() {
   );
 }
 
-const handleTestItem = (id: string) => {
-  // Implementar
-  console.log('Testando item:', id);
-};
-
-const handleDeleteItem = (id: string) => {
-  // Implementar
-};
+// Local handlers are implemented inside the HomeScreen component above.

@@ -24,6 +24,12 @@ Este projeto usa [Expo](https://expo.dev) com [file-based routing](https://docs.
 npm install
 ```
 
+After installing dependencies, if you're using the app with a device/emulator, install Expo's TTS library:
+
+```bash
+npx expo install expo-speech
+```
+
 ### 2. Iniciar o app
 
 ```bash
@@ -31,6 +37,15 @@ npx expo start
 ```
 
 Opções disponíveis:
+
+### Voice (TTS) in App
+
+After launching the app, go to Settings and enable the "Fala (TTS)" toggle to allow the app to read detections aloud regardless of TalkBack settings.
+You should also install the TTS runtime with:
+
+```bash
+npx expo install expo-speech
+```
 
 - [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)

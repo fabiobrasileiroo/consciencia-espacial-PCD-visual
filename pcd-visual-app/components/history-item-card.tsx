@@ -12,9 +12,10 @@ interface HistoryItemCardProps {
   onPress?: () => void;
   onDelete?: () => void;
   onTest?: () => void;
+  onReplay?: () => void;
 }
 
-export function HistoryItemCard({ text, timestamp, objects, confidence, onPress, onDelete, onTest }: HistoryItemCardProps) {
+export function HistoryItemCard({ text, timestamp, objects, confidence, onPress, onDelete, onTest, onReplay }: HistoryItemCardProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -77,6 +78,17 @@ export function HistoryItemCard({ text, timestamp, objects, confidence, onPress,
         </View>
 
         <View style={styles.actions}>
+          {onReplay && (
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={onReplay}
+              accessibilityLabel="Reproduzir TTS"
+              accessibilityHint="Pressione para reproduzir esta detecção em voz sintética"
+            >
+              <IconSymbol name="play.circle.fill" size={24} color="#4CAF50" />
+            </TouchableOpacity>
+          )}
+
           {onTest && (
             <TouchableOpacity
               style={styles.testButton}
@@ -84,7 +96,7 @@ export function HistoryItemCard({ text, timestamp, objects, confidence, onPress,
               accessibilityLabel="Testar transcrição"
               accessibilityHint="Pressione para enviar esta detecção para teste"
             >
-              <IconSymbol name="play.circle.fill" size={24} color="#4CAF50" />
+              <IconSymbol name="paperplane.fill" size={20} color="#3B82F6" />
             </TouchableOpacity>
           )}
 

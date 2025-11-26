@@ -144,6 +144,25 @@ COCO_LABELS = [
     'hair drier','toothbrush'
 ]
 
+# Tradução dos labels COCO para Português (já traduzido, sem precisar de API)
+COCO_LABELS_PT = [
+    'pessoa','bicicleta','carro','moto','avião','ônibus','trem','caminhão','barco','semáforo',
+    'hidrante','placa de pare','parquímetro','banco','pássaro','gato','cachorro','cavalo','ovelha','vaca',
+    'elefante','urso','zebra','girafa','mochila','guarda-chuva','bolsa','gravata','mala','frisbee',
+    'esquis','snowboard','bola esportiva','pipa','taco de beisebol','luva de beisebol','skate','prancha de surfe',
+    'raquete de tênis','garrafa','taça de vinho','xícara','garfo','faca','colher','tigela','banana','maçã',
+    'sanduíche','laranja','brócolis','cenoura','cachorro-quente','pizza','rosquinha','bolo','cadeira','sofá',
+    'planta em vaso','cama','mesa de jantar','vaso sanitário','televisão','notebook','mouse','controle remoto','teclado','celular',
+    'micro-ondas','forno','torradeira','pia','geladeira','livro','relógio','vaso','tesoura','ursinho de pelúcia',
+    'secador de cabelo','escova de dentes'
+]
+
+def get_label_pt(cls_index):
+    """Retorna o label em português para o índice da classe COCO"""
+    if 0 <= cls_index < len(COCO_LABELS_PT):
+        return COCO_LABELS_PT[cls_index]
+    return f"objeto{cls_index}"
+
 CONF_THRESHOLD = 0.25
 IOU_THRESHOLD = 0.45
 
@@ -298,10 +317,13 @@ def detect_yolo(frame):
         score = float(scores[i])
         x1n, y1n, x2n, y2n = boxes_xyxy[i]
         
-        label_name = COCO_LABELS[cls] if cls < len(COCO_LABELS) else f"cls{cls}"
+        # Usar label em português diretamente
+        label_name_en = COCO_LABELS[cls] if cls < len(COCO_LABELS) else f"cls{cls}"
+        label_name_pt = get_label_pt(cls)
         
         detections.append({
-            'class': label_name,
+            'class': label_name_pt,  # Já em português
+            'class_en': label_name_en,  # Inglês para referência
             'confidence': score,
             'bbox': [float(x1n), float(y1n), float(x2n), float(y2n)]
         })

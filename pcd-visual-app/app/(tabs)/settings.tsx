@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
+// import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl, TextInput, Switch } from 'react-native';
 import { styles } from '../../styles/styles';
 import { useApp } from '@/contexts/AppContext';
 import { BluetoothService, BluetoothDevice } from '@/services/bluetooth-service';
@@ -50,6 +51,10 @@ export default function SettingsScreen() {
     systemsHealth,
     apiUrl,
     setApiUrl,
+    ttsEnabled,
+    setEnableTTS,
+    speakOnlyInManual,
+    setSpeakOnlyInManual,
   } = useApp();
   const [bluetoothDevices, setBluetoothDevices] = useState<BluetoothDevice[]>([]);
   const [scanning, setScanning] = useState(false);
@@ -301,6 +306,42 @@ export default function SettingsScreen() {
             )}
           </>
         )}
+      </View>
+
+      {/* TTS Toggle */}
+      <View style={styles.card}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.sectionTitle}>Fala (TTS)</Text>
+          <Switch
+            value={ttsEnabled}
+            onValueChange={async (val) => {
+              await setEnableTTS(val);
+              showToast(`Fala ${val ? 'ativada' : 'desativada'}`, 'success');
+            }}
+            trackColor={{ false: '#64748B', true: '#22C55E' }}
+          />
+        </View>
+        <Text style={styles.subText}>
+          Quando ativado, o aplicativo reproduz as descrições detectadas em voz sintética.
+        </Text>
+      </View>
+
+      {/* Fala apenas em modo manual */}
+      <View style={styles.card}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.sectionTitle}>Falar apenas em modo manual</Text>
+          <Switch
+            value={speakOnlyInManual}
+            onValueChange={async (val) => {
+              await setSpeakOnlyInManual(val);
+              showToast(`Falar apenas em modo manual: ${val ? 'Ativado' : 'Desativado'}`, 'success');
+            }}
+            trackColor={{ false: '#64748B', true: '#22C55E' }}
+          />
+        </View>
+        <Text style={styles.subText}>
+          Quando ativado, o aplicativo irá reproduzir as detecções somente quando o servidor estiver em modo Manual.
+        </Text>
       </View>
 
       {/* Status dos Módulos ESP32 */}

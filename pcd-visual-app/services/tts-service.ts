@@ -1,3 +1,5 @@
+import * as Speech from 'expo-speech';
+
 export interface ITTSService {
   speak(text: string): Promise<void>;
   stop(): Promise<void>;
@@ -11,15 +13,34 @@ export class TTSService implements ITTSService {
     console.log(`TTS: Speaking "${text}"`);
     this.speaking = true;
 
-    // Simula tempo de fala (100ms por palavra)
-    const words = text.split(' ').length;
-    await new Promise(resolve => setTimeout(resolve, words * 100));
-
-    this.speaking = false;
+    try {
+      return await new Promise<void>((resolve) => {
+        Speech.speak(text || '', {
+          language: 'pt-BR',
+          pitch: 1.0,
+          onDone: () => {
+            this.speaking = false;
+            resolve();
+          },
+          onError: () => {
+            this.speaking = false;
+            resolve();
+          }
+        });
+      });
+    } catch (e) {
+      console.error('TTS error:', e);
+      this.speaking = false;
+    }
   }
 
   async stop(): Promise<void> {
     console.log('TTS: Stopped');
+    try {
+      Speech.stop();
+    } catch (e) {
+      console.error('TTS stop error:', e);
+    }
     this.speaking = false;
   }
 

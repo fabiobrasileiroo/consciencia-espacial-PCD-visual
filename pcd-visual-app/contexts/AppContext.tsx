@@ -100,6 +100,16 @@ interface AppContextType {
   toast: ToastConfig;
   showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
   hideToast: () => void;
+  // TTS control
+  ttsEnabled: boolean;
+  setEnableTTS: (enabled: boolean) => Promise<void>;
+  // If true, only speak when server operation mode is manual
+  speakOnlyInManual: boolean;
+  setSpeakOnlyInManual: (enabled: boolean) => Promise<void>;
+  // current operation mode from server: 'realtime' | 'manual'
+  serverOperationMode: 'realtime' | 'manual';
+  // Play arbitrary text subject to TTS settings and server mode
+  speakText: (text: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -135,6 +145,70 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     message: '',
     type: 'info',
   });
+  const [ttsEnabled, setTtsEnabled] = useState<boolean>(true);
+  const [speakOnlyInManual, setSpeakOnlyInManualState] = useState<boolean>(false);
+  const [serverOperationMode, setServerOperationMode] = useState<'realtime' | 'manual'>('realtime');
+  const TTS_ENABLE_STORAGE_KEY = '@lucoi:tts_enabled';
+  const SPEAK_ONLY_MANUAL_KEY = '@lucoi:speak_only_manual';
+
+  // Load saved TTS setting
+  useEffect(() => {
+    async function loadTTS() {
+      try {
+        const saved = await storageService.get(TTS_ENABLE_STORAGE_KEY);
+        if (saved !== null) {
+          setTtsEnabled(saved === 'true');
+        }
+      } catch (err) {
+        console.error('Erro ao carregar TTS enabled:', err);
+      }
+    }
+    loadTTS();
+  }, []);
+
+  const setEnableTTS = async (enabled: boolean) => {
+    try {
+      await storageService.set(TTS_ENABLE_STORAGE_KEY, enabled ? 'true' : 'false');
+      setTtsEnabled(enabled);
+    } catch (err) {
+      console.error('Erro ao salvar preferencia TTS:', err);
+    }
+  };
+
+  // Load and set speak-only-in-manual setting
+  useEffect(() => {
+    async function loadSpeakOnly() {
+      try {
+        const saved = await storageService.get(SPEAK_ONLY_MANUAL_KEY);
+        if (saved !== null) {
+          setSpeakOnlyInManualState(saved === 'true');
+        }
+      } catch (err) {
+        console.error('Erro ao carregar speakOnlyInManual:', err);
+      }
+    }
+    loadSpeakOnly();
+  }, []);
+
+  const setSpeakOnlyInManual = async (enabled: boolean) => {
+    try {
+      await storageService.set(SPEAK_ONLY_MANUAL_KEY, enabled ? 'true' : 'false');
+      setSpeakOnlyInManualState(enabled);
+    } catch (err) {
+      console.error('Erro ao salvar preferencia speakOnlyInManual:', err);
+    }
+  };
+
+  const speakText = async (text: string) => {
+    if (!text) return;
+    if (!ttsEnabled) return;
+    if (speakOnlyInManual && serverOperationMode !== 'manual') return;
+    try {
+      await ttsService.speak(text);
+    } catch (err) {
+      console.error('Erro ao reproduzir texto via TTS:', err);
+    }
+  };
 
   // Carregar URL customizada do AsyncStorage ao iniciar
   useEffect(() => {
@@ -371,6 +445,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return;
       }
 
+      // Mode change from server
+      if (type === 'mode-change' && data) {
+        if (data.mode === 'manual' || data.mode === 'realtime') {
+          setServerOperationMode(data.mode);
+        }
+        return;
+      }
+
       // Nova detecção em tempo real
       if (type === 'detection' && data) {
         const newItem: DetectionHistory = {
@@ -390,10 +472,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           setDetectedObjectDistance(data.distance);
         }
 
-        // Falar a descrição da nova detecção
-        ttsService.speak(newItem.text).catch(err => {
-          console.error('Erro no TTS:', err);
-        });
+        // Falar a descrição da nova detecção (se habilitado)
+        if (ttsEnabled && (!speakOnlyInManual || serverOperationMode === 'manual')) {
+          ttsService.speak(newItem.text).catch(err => {
+            console.error('Erro no TTS:', err);
+          });
+        }
 
         // Vibração básica em qualquer detecção (sem toast/scroll)
         hapticsService.impact('medium').catch(err => {
@@ -446,6 +530,10 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         },
       });
     }
+    // ainda reproduz em local, se habilitado e permitido
+    if (ttsEnabled && (!speakOnlyInManual || serverOperationMode === 'manual')) {
+      ttsService.speak(item.text).catch(err => console.error('Erro TTS testWithHistoryItem:', err));
+    }
   };
 
   const value = {
@@ -477,6 +565,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     detectedObjectDistance,
     apiUrl,
     setApiUrl,
+    ttsEnabled,
+    setEnableTTS,
+    speakOnlyInManual,
+    setSpeakOnlyInManual,
+    serverOperationMode,
+    speakText,
   };
 
   return (
