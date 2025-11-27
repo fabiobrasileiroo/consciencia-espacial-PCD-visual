@@ -37,6 +37,7 @@ export function HistoryItemCard({ text, timestamp, objects, confidence, onPress,
         <View style={styles.iconContainer}>
           <IconSymbol name="text.bubble" size={24} color="#2196F3" />
         </View>
+        
 
         <View style={styles.textContainer}>
           <Text style={[styles.text, isDark && styles.textDark]} numberOfLines={2}>

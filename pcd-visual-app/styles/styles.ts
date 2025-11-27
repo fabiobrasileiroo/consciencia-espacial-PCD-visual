@@ -134,6 +134,22 @@ export const styles = StyleSheet.create({
     borderColor: '#334155',
   },
 
+  // Pequeno botão usado em cabeçalhos e controles compactos
+  smallButton: {
+    backgroundColor: '#404C72',
+    paddingVertical: 8,
+    // width: 32,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+    minHeight: 36,
+    flex: 0,
+  },
+
   // Textos
   largeStatusText: {
     color: '#fff',

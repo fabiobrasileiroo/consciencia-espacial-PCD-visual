@@ -662,7 +662,7 @@ export default function HomeScreen() {
             {currentTranscription && (
               <TouchableOpacity
                 style={[
-                  styles.button2,
+                  styles.smallButton,
                   {
                     backgroundColor: isPlayingTTS ? '#64748B' : '#3B82F6',
                     paddingHorizontal: 12,
