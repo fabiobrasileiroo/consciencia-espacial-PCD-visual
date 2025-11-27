@@ -9,8 +9,8 @@
 // ===========================
 // CONFIGURAÇÃO WIFI
 // ===========================
-const char* defaultSsid = "FJ";
-const char* defaultPassword = "#f39A@jl32*1";
+const char* defaultSsid = "Projetos";
+const char* defaultPassword = "Inovatech@2025";
 String wifiSsid = defaultSsid;
 String wifiPassword = defaultPassword;
 
