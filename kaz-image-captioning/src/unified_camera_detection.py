@@ -15,7 +15,7 @@ from utils.language_utils import convert_vector_idx2word
 from time import time, sleep
 import os
 import argparse
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 import json
 import requests
 import numpy as np
@@ -82,7 +82,7 @@ beam_search_kwargs = {
     'eos_idx': coco_tokens['word2idx_dict'][coco_tokens['eos_str']]
 }
 
-translator = Translator()
+translator = GoogleTranslator(source='auto', target='pt')
 
 # ===== CONTROLE DE MODO =====
 def check_operation_mode(server_url):
@@ -174,8 +174,7 @@ def cv2_to_pil(img):
 def translate_to_portuguese(text):
     """Traduz texto gerado pelo modelo para português"""
     try:
-        translation = translator.translate(text, src='auto', dest='pt')
-        result = translation.text
+        result = translator.translate(text)
         
         # Limpar duplicações e problemas comuns do Google Translate
         # Ex: "Homem usando fones Homem usando fones" -> "Homem usando fones"

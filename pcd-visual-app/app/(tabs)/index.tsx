@@ -4,7 +4,7 @@ import { styles } from '../../styles/styles';
 import { useApp } from '@/contexts/AppContext';
 import { Audio } from 'expo-av';
 import { BluetoothService } from '@/services/bluetooth-service';
-import { hapticsService } from '@/services/service-provider';
+import { hapticsService, ttsService } from '@/services/service-provider';
 import { HistoryItemCard } from '@/components/history-item-card';
 import { Toast } from '@/components/toast';
 import { SkeletonCard, SkeletonStats } from '@/components/skeleton-loader';
@@ -149,11 +149,13 @@ export default function HomeScreen() {
   const handleTestTTS = async () => {
     try {
       setIsPlayingTTS(true);
-      showToast('Reproduzindo texto de teste...', 'info');
+      showToast('Reproduzindo texto...', 'info');
 
-      const testText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+      // Usa o texto da transcrição atual ou um texto de teste
+      const textToSpeak = currentTranscription || "Testando síntese de voz. Se você está ouvindo esta mensagem, o TTS está funcionando corretamente.";
 
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Chama o serviço TTS diretamente (ignora configurações quando usuário clica)
+      await ttsService.speak(textToSpeak);
 
       showToast('Texto reproduzido com sucesso!', 'success');
     } catch (error) {
@@ -239,8 +241,14 @@ export default function HomeScreen() {
   const handleReplayItem = async (id: string) => {
     const item = detectionHistory.find(i => i.id === id);
     if (!item) return;
-    // use AppContext speakText to respect settings
-    await speakText(item.text);
+    // Quando usuário clica para ouvir, reproduz diretamente (ignora configurações)
+    try {
+      showToast('Reproduzindo...', 'info');
+      await ttsService.speak(item.text);
+    } catch (error) {
+      console.error('Erro ao reproduzir:', error);
+      showToast('Erro ao reproduzir áudio', 'error');
+    }
   };
 
   const toggleOperationMode = async () => {

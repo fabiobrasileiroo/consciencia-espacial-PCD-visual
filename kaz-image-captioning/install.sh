@@ -30,7 +30,7 @@ if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
 fi
 
 # Create venv if missing
-if [ ! -d "$VENV_DIR" ]; then
+if [ ! -d "$VENV_Dpython3 launcher.py --source esp32 --url http://172.25.26.13:81/stream --mode both --auto --interval 3IR" ]; then
   echo "Creating virtualenv at $VENV_DIR"
   "$PYTHON_BIN" -m venv "$VENV_DIR"
 fi
