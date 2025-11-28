@@ -102,7 +102,7 @@ void setup() {
   // ⚠️ IMPORTANTE: Definir o mesmo canal WiFi do PAI
   // O PAI usa o canal da rede WiFi "FJ"
   // SEU ROTEADOR ESTÁ NO CANAL 4 (visto no monitor serial do PAI)
-  int8_t channel = 4; // ← CANAL 4 DO SEU ROTEADOR "FJ"
+  int8_t channel = 6; // ← CANAL 4 DO SEU ROTEADOR "FJ"
   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
   
   Serial.println("\n╔════════════════════════════════════════╗");

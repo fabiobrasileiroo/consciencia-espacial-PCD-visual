@@ -9,8 +9,8 @@
 // ===========================
 // CONFIGURAÇÃO WIFI
 // ===========================
-const char* defaultSsid = "Projetos";
-const char* defaultPassword = "Inovatech@2025";
+const char* defaultSsid = "Fabiolinux";
+const char* defaultPassword = "mxaq7558";
 String wifiSsid = defaultSsid;
 String wifiPassword = defaultPassword;
 
@@ -24,7 +24,7 @@ String wifiPassword = defaultPassword;
 // const bool useSSL = true;
 
 // DESENVOLVIMENTO (Local):
-const char* wsServer = "192.168.100.56";  // IP do seu PC rodando Node.js
+const char* wsServer = "10.46.35.141";  // IP do seu PC rodando Node.js
 const int wsPort = 3000;
 const char* wsPath = "/esp32";
 const bool useSSL = false;
