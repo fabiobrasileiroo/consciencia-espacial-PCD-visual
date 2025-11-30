@@ -1,0 +1,13 @@
+{
+  "name": "change-management-automation",
+  "version": "0.1.0",
+  "description": "Automação para gerar planilhas de Change Management a partir dos dados do repo e git",
+  "main": "generate_change_management.js",
+  "scripts": {
+    "generate": "node generate_change_management.js"
+  },
+  "dependencies": {
+    "exceljs": "^4.3.0",
+    "simple-git": "^3.19.0"
+  }
+}
