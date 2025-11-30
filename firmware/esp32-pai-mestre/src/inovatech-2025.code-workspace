@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../../../.."
+		},
+		{
+			"name": "modulo1-sensor",
+			"path": "../../modulo1-sensor"
+		},
+		{
+			"name": "esp32-pai-mestre",
+			"path": ".."
+		}
+	],
+	"settings": {}
+}
